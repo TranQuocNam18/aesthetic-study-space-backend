@@ -71,7 +71,21 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "http://localhost:5173",
+                    "https://aestheticspaceproject.vercel.app"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -93,6 +107,7 @@ if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swa
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
 app.UseRateLimiter();
@@ -105,5 +120,8 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Aest
     .AllowAnonymous();
 
 await SeedData.InitializeAsync(app.Services);
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+app.Urls.Add($"http://0.0.0.0:{port}");
 
 app.Run();
