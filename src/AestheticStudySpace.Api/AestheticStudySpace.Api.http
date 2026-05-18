@@ -1,0 +1,6 @@
+@AestheticStudySpace.Api_HostAddress = http://localhost:5022
+
+GET {{AestheticStudySpace.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

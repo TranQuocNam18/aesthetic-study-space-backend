@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: aesthetic-study-space-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Secret
+        sync: false
+      - key: Jwt__Issuer
+        value: AestheticStudySpace
+      - key: Jwt__Audience
+        value: AestheticStudySpace.Client
+      - key: Cors__AllowedOrigins__0
+        sync: false
+      - key: Database__Provider
+        value: SqlServer
