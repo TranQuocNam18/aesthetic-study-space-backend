@@ -63,7 +63,7 @@ var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<st
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Frontend", policy =>
+    options.AddPolicy("AllowFrontend", policy =>  // Đổi "Frontend" thành "AllowFrontend"
     {
         policy.WithOrigins(corsOrigins)
             .AllowAnyHeader()
@@ -71,21 +71,7 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy
-                .WithOrigins(
-                    "http://localhost:5173",
-                    "https://aestheticspaceproject.vercel.app"
-                )
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        });
-});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -109,7 +95,6 @@ if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swa
 
 app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
-app.UseCors("Frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

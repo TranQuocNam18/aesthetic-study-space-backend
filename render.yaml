@@ -22,3 +22,28 @@ services:
         value: https://aestheticspaceprojectpreview.vercel.app
       - key: Database__Provider
         value: SqlServer
+
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+
+// ❌ XÓA cái này (AddCors thứ 2):
+// builder.Services.AddCors(options =>
+// {
+//     options.AddPolicy("AllowFrontend", ...)
+// });
+
+// ✅ GIỮ cái này và đổi tên nó:
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>  // Đổi "Frontend" thành "AllowFrontend"
+    {
+        policy.WithOrigins(corsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+// Trong app:
+app.UseCors("AllowFrontend");  // ✅ Chỉ cần 1 cái này
+// ❌ Xóa dòng: app.UseCors("Frontend");
