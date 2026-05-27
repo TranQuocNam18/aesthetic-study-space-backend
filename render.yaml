@@ -17,6 +17,8 @@ services:
       - key: Jwt__Audience
         value: AestheticStudySpace.Client
       - key: Cors__AllowedOrigins__0
-        sync: false
+        value: https://aestheticspaceproject.vercel.app
+      - key: Cors__AllowedOrigins__1
+        value: https://aestheticspaceprojectpreview.vercel.app
       - key: Database__Provider
-        value: SqlServer
+        value: PostgreSQL
