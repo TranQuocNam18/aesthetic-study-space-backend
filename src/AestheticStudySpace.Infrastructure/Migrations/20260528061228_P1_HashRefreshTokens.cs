@@ -10,15 +10,9 @@ namespace AestheticStudySpace.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Remove duplicate tokens before adding constraint
-            migrationBuilder.Sql(@"
-                DELETE FROM ""RefreshTokens"" 
-                WHERE ""Id"" NOT IN (
-                    SELECT MIN(""Id"") 
-                    FROM ""RefreshTokens"" 
-                    GROUP BY ""Token""
-                );
-            ");
+            // Clear all old refresh tokens (they're development data)
+            // This is safe because new tokens will be generated on login
+            migrationBuilder.Sql("DELETE FROM \"RefreshTokens\";");
 
             migrationBuilder.AddColumn<string>(
                 name: "TokenHash",
