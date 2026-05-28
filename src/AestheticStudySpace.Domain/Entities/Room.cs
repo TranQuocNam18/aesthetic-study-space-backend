@@ -7,7 +7,6 @@ public class Room : BaseEntity
     public string? ThumbnailUrl { get; set; }
     public string? BackgroundUrl { get; set; }
     public bool IsPremium { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<RoomAssetMapping> AssetMappings { get; set; } = new List<RoomAssetMapping>();
     public ICollection<UserRoomConfig> UserConfigs { get; set; } = new List<UserRoomConfig>();

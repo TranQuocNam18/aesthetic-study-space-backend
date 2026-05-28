@@ -32,4 +32,13 @@ public class RoomsController : ControllerBase
         var room = await _roomService.GetByIdAsync(id, cancellationToken);
         return Ok(ApiResponse<RoomDetailDto>.Ok(room));
     }
+
+    [HttpPost("{id:guid}/duplicate")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<RoomDetailDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<RoomDetailDto>>> Duplicate(Guid id, CancellationToken cancellationToken)
+    {
+        var room = await _roomService.DuplicateAsync(id, cancellationToken);
+        return Ok(ApiResponse<RoomDetailDto>.Ok(room));
+    }
 }

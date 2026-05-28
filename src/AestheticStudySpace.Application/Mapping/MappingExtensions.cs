@@ -11,7 +11,7 @@ namespace AestheticStudySpace.Application.Mapping;
 public static class MappingExtensions
 {
     public static UserProfileDto ToProfileDto(this User user) =>
-        new(user.Id, user.Username, user.Email, user.Role.ToString(), user.AccountTier.ToString(), user.AvatarUrl, user.CreatedAt);
+        new(user.Id, user.Username, user.Email, user.Role.Name, user.AccountTier.ToString(), user.AvatarUrl, user.CreatedAt);
 
     public static RoomListItemDto ToListItemDto(this Room room) =>
         new(room.Id, room.Name, room.Description, room.ThumbnailUrl, room.IsPremium);

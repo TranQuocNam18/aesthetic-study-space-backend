@@ -29,6 +29,17 @@ public class PomodoroRepository : IPomodoroRepository
     public Task<int> CountHistoryAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _context.PomodoroSessions.CountAsync(p => p.UserId == userId && p.EndTime != null, cancellationToken);
 
+    public async Task<(int sessions, int totalMinutes)> GetStatsAsync(Guid userId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    {
+        var query = _context.PomodoroSessions
+            .AsNoTracking()
+            .Where(p => p.UserId == userId && p.EndTime != null && p.StartTime >= fromUtc && p.StartTime <= toUtc);
+
+        var sessions = await query.CountAsync(cancellationToken);
+        var totalMinutes = await query.SumAsync(p => (int?)p.DurationMinutes, cancellationToken) ?? 0;
+        return (sessions, totalMinutes);
+    }
+
     public async Task AddAsync(PomodoroSession session, CancellationToken cancellationToken = default) =>
         await _context.PomodoroSessions.AddAsync(session, cancellationToken);
 

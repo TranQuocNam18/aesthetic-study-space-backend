@@ -79,4 +79,41 @@ public class RoomService : IRoomService
         await _roomRepository.DeleteAsync(room, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<RoomDetailDto> DuplicateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var room = await _roomRepository.GetByIdAsync(id, cancellationToken: cancellationToken)
+            ?? throw new NotFoundException($"Room '{id}' was not found.");
+
+        var clone = new Room
+        {
+            Name = $"{room.Name} (Copy)",
+            Description = room.Description,
+            ThumbnailUrl = room.ThumbnailUrl,
+            BackgroundUrl = room.BackgroundUrl,
+            IsPremium = room.IsPremium
+        };
+
+        await _roomRepository.AddAsync(clone, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var mappings = await _mappingRepository.GetByRoomIdAsync(id, cancellationToken);
+        foreach (var m in mappings)
+        {
+            await _mappingRepository.AddAsync(new RoomAssetMapping
+            {
+                RoomId = clone.Id,
+                AssetId = m.AssetId,
+                DefaultPositionX = m.DefaultPositionX,
+                DefaultPositionY = m.DefaultPositionY,
+                DefaultScale = m.DefaultScale,
+                DefaultOpacity = m.DefaultOpacity,
+                DefaultLayerIndex = m.DefaultLayerIndex
+            }, cancellationToken);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var cloneMappings = await _mappingRepository.GetByRoomIdAsync(clone.Id, cancellationToken);
+        return clone.ToDetailDto(cloneMappings);
+    }
 }

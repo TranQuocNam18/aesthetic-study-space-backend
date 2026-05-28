@@ -1,5 +1,3 @@
-using AestheticStudySpace.Domain.Enums;
-
 namespace AestheticStudySpace.Domain.Entities;
 
 public class User : BaseEntity
@@ -8,9 +6,15 @@ public class User : BaseEntity
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
-    public UserRole Role { get; set; } = UserRole.User;
-    public AccountTier AccountTier { get; set; } = AccountTier.Free;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Guid RoleId { get; set; }
+    public Role Role { get; set; } = null!;
+
+    public AestheticStudySpace.Domain.Enums.AccountTier AccountTier { get; set; } = AestheticStudySpace.Domain.Enums.AccountTier.Free;
+
+    public int CoinsBalance { get; set; }
+    public bool IsBanned { get; set; }
+    public DateTime? LastLoginAt { get; set; }
 
     public ICollection<UserRoomConfig> RoomConfigs { get; set; } = new List<UserRoomConfig>();
     public ICollection<Todo> Todos { get; set; } = new List<Todo>();

@@ -42,4 +42,12 @@ public class PomodoroController : ControllerBase
         var history = await _pomodoroService.GetHistoryAsync(User.GetUserId(), page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResult<PomodoroSessionDto>>.Ok(history));
     }
+
+    [HttpGet("stats")]
+    [ProducesResponseType(typeof(ApiResponse<PomodoroStatsDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<PomodoroStatsDto>>> Stats(CancellationToken cancellationToken = default)
+    {
+        var stats = await _pomodoroService.GetStatsAsync(User.GetUserId(), cancellationToken);
+        return Ok(ApiResponse<PomodoroStatsDto>.Ok(stats));
+    }
 }

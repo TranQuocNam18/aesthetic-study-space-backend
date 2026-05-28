@@ -9,6 +9,10 @@ namespace AestheticStudySpace.Infrastructure.Persistence;
 public static class SeedData
 {
     public static readonly Guid AdminUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    public static readonly Guid GuestRoleId = Guid.Parse("aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
+    public static readonly Guid UserRoleId = Guid.Parse("aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
+    public static readonly Guid PremiumUserRoleId = Guid.Parse("aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa3");
+    public static readonly Guid AdminRoleId = Guid.Parse("aaaaaaa1-aaaa-aaaa-aaaa-aaaaaaaaaaa4");
     public static readonly Guid CozyAtticRoomId = Guid.Parse("22222222-2222-2222-2222-222222222201");
     public static readonly Guid NeonLoftRoomId = Guid.Parse("22222222-2222-2222-2222-222222222202");
     public static readonly Guid RainAssetId = Guid.Parse("33333333-3333-3333-3333-333333333301");
@@ -25,22 +29,39 @@ public static class SeedData
 
         await context.Database.MigrateAsync();
 
-        if (await context.Users.AnyAsync())
+        var roles = new List<Role>
         {
-            logger.LogInformation("Database already seeded.");
-            return;
+            new() { Id = GuestRoleId, Name = "Guest", Description = "Demo mode only; cannot persist layouts.", IsSystem = true },
+            new() { Id = UserRoleId, Name = "User", Description = "Freemium user.", IsSystem = true },
+            new() { Id = PremiumUserRoleId, Name = "PremiumUser", Description = "Premium user.", IsSystem = true },
+            new() { Id = AdminRoleId, Name = "Admin", Description = "Administrator.", IsSystem = true }
+        };
+
+        foreach (var role in roles)
+        {
+            if (!await context.Roles.AnyAsync(r => r.Id == role.Id))
+                await context.Roles.AddAsync(role);
         }
 
-        var admin = new User
+        await context.SaveChangesAsync();
+
+        if (!await context.Users.AnyAsync(u => u.Id == AdminUserId))
         {
-            Id = AdminUserId,
-            Username = "admin",
-            Email = "admin@aestheticstudy.space",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@12345"),
-            Role = UserRole.Admin,
-            AccountTier = AccountTier.Premium,
-            AvatarUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg"
-        };
+            var adminRole = await context.Roles.FirstAsync(r => r.Id == AdminRoleId);
+            var admin = new User
+            {
+                Id = AdminUserId,
+                Username = "admin",
+                Email = "admin@aestheticstudy.space",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@12345"),
+                RoleId = adminRole.Id,
+                Role = adminRole,
+                AccountTier = AccountTier.Premium,
+                AvatarUrl = "https://res.cloudinary.com/demo/image/upload/sample.jpg"
+            };
+
+            await context.Users.AddAsync(admin);
+        }
 
         var cozyAttic = new Room
         {
@@ -131,10 +152,15 @@ public static class SeedData
             new() { RoomId = neonLoft.Id, AssetId = lofiPremium.Id, DefaultLayerIndex = 1 }
         };
 
-        await context.Users.AddAsync(admin);
-        await context.Rooms.AddRangeAsync(cozyAttic, neonLoft);
-        await context.Assets.AddRangeAsync(rain, cafe, whiteNoise, cat, lofiPremium);
-        await context.RoomAssetMappings.AddRangeAsync(mappings);
+        if (!await context.Rooms.AnyAsync())
+            await context.Rooms.AddRangeAsync(cozyAttic, neonLoft);
+
+        if (!await context.Assets.AnyAsync())
+            await context.Assets.AddRangeAsync(rain, cafe, whiteNoise, cat, lofiPremium);
+
+        if (!await context.RoomAssetMappings.AnyAsync())
+            await context.RoomAssetMappings.AddRangeAsync(mappings);
+
         await context.SaveChangesAsync();
 
         logger.LogInformation("Database seeded with sample rooms, assets, and admin user.");

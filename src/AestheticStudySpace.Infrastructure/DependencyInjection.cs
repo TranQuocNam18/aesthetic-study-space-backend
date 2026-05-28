@@ -2,6 +2,8 @@ using System.Text;
 using AestheticStudySpace.Application.Interfaces;
 using AestheticStudySpace.Application.Interfaces.Repositories;
 using AestheticStudySpace.Application.Interfaces.Services;
+using AestheticStudySpace.Application.Common;
+using AestheticStudySpace.Infrastructure.Integrations;
 using AestheticStudySpace.Infrastructure.Identity;
 using AestheticStudySpace.Infrastructure.Persistence;
 using AestheticStudySpace.Infrastructure.Repositories;
@@ -18,6 +20,11 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
+        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
+        services.Configure<VnPaySettings>(configuration.GetSection(VnPaySettings.SectionName));
+        services.Configure<SePaySettings>(configuration.GetSection(SePaySettings.SectionName));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
@@ -33,16 +40,29 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
         services.AddScoped<IRoomRepository, RoomRepository>();
+        services.AddScoped<IRoomLayoutRepository, RoomLayoutRepository>();
         services.AddScoped<IAssetRepository, AssetRepository>();
+        services.AddScoped<IStoreRepository, StoreRepository>();
+        services.AddScoped<ICoinTransactionRepository, CoinTransactionRepository>();
+        services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
+        services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+        services.AddScoped<IMissionRepository, MissionRepository>();
+        services.AddScoped<IUserMissionRepository, UserMissionRepository>();
+        services.AddScoped<IAdminRepository, AdminRepository>();
+        services.AddScoped<IAdminAnalyticsRepository, AdminAnalyticsRepository>();
         services.AddScoped<IRoomAssetMappingRepository, RoomAssetMappingRepository>();
         services.AddScoped<IUserRoomConfigRepository, UserRoomConfigRepository>();
         services.AddScoped<ITodoRepository, TodoRepository>();
         services.AddScoped<IPomodoroRepository, PomodoroRepository>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
+        services.AddScoped<IMediaStorageService, CloudinaryMediaStorageService>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
 
         var jwt = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are not configured.");

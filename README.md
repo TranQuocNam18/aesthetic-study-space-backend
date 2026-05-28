@@ -20,10 +20,14 @@ src/
 | Runtime | .NET 8 |
 | API | ASP.NET Core Web API |
 | ORM | Entity Framework Core 8 (Code First) |
-| Database | SQL Server (default), PostgreSQL-ready |
+| Database | PostgreSQL (primary) |
 | Auth | JWT + BCrypt password hashing |
 | Docs | Swagger / OpenAPI + XML comments |
-| Realtime (scaffold) | SignalR `PresenceHub` |
+| Realtime | SignalR `PresenceHub` |
+| Media | Cloudinary (URL-only in DB) |
+| Payments | VNPay + SePay |
+| Validation | FluentValidation (planned in P2) |
+| Mapping | AutoMapper (planned in P2) |
 
 ## Core design: unified Asset system
 
@@ -132,7 +136,7 @@ dotnet ef migrations remove \
 
 ---
 
-## PostgreSQL (future migration)
+## PostgreSQL
 
 1. Set provider and connection string:
 
@@ -157,7 +161,84 @@ dotnet ef migrations add InitialPostgres ...
 dotnet ef database update ...
 ```
 
-> Enums are stored as strings for provider portability. Avoid SQL Server–specific column types in configurations.
+> Enums are stored as strings for provider portability.
+
+---
+
+## Cloudinary setup
+
+Set environment variables (Render/Docker/local user-secrets):
+
+- `Cloudinary__CloudName`
+- `Cloudinary__ApiKey`
+- `Cloudinary__ApiSecret`
+
+Used for room layout thumbnails upload via base64 data URI.
+
+---
+
+## Google OAuth setup
+
+Set:
+
+- `GoogleAuth__ClientId`
+
+API: `POST /api/auth/google-login` with `{ "idToken": "..." }`.
+
+---
+
+## VNPay setup
+
+Set:
+
+- `VNPay__TmnCode`
+- `VNPay__HashSecret`
+- `VNPay__BaseUrl` (optional; defaults to sandbox URL)
+
+Endpoints:
+
+- `POST /api/payment/vnpay/create`
+- `GET /api/payment/vnpay/callback`
+
+---
+
+## SePay setup
+
+Set:
+
+- `SePay__WebhookSecret`
+
+Webhook header:
+
+- `X-SePay-Signature`: hex HMAC-SHA256(secret, rawBody)
+
+Endpoints:
+
+- `POST /api/payment/sepay/create`
+- `POST /api/payment/sepay/webhook`
+
+---
+
+## SMTP setup (forgot/reset password)
+
+Set:
+
+- `Smtp__Host`, `Smtp__Port`, `Smtp__EnableSsl`
+- `Smtp__Username`, `Smtp__Password`
+- `Smtp__FromEmail`, `Smtp__FromName`
+
+---
+
+## Docker Compose
+
+Run API + PostgreSQL locally:
+
+```bash
+docker compose up --build
+```
+
+API: `http://localhost:8080`  
+Swagger: `http://localhost:8080/swagger`
 
 ---
 
