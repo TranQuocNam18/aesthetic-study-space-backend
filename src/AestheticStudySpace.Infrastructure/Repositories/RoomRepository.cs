@@ -12,7 +12,13 @@ public class RoomRepository : IRoomRepository
     public RoomRepository(AppDbContext context) => _context = context;
 
     public async Task<IReadOnlyList<Room>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        await _context.Rooms.AsNoTracking().OrderBy(r => r.Name).ToListAsync(cancellationToken);
+        await _context.Rooms.AsNoTracking().Where(r => r.UserId == null).OrderBy(r => r.Name).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Room>> GetByUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await _context.Rooms.AsNoTracking().Where(r => r.UserId == userId).OrderBy(r => r.Name).ToListAsync(cancellationToken);
+
+    public Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _context.Rooms.CountAsync(r => r.UserId == userId, cancellationToken);
 
     public Task<Room?> GetByIdAsync(Guid id, bool includeAssets = false, CancellationToken cancellationToken = default) =>
         _context.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);

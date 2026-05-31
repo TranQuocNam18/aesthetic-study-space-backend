@@ -11,4 +11,5 @@ public interface IPomodoroRepository
     Task<(int sessions, int totalMinutes)> GetStatsAsync(Guid userId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
     Task AddAsync(PomodoroSession session, CancellationToken cancellationToken = default);
     Task UpdateAsync(PomodoroSession session, CancellationToken cancellationToken = default);
+    Task DeleteAsync(PomodoroSession session, CancellationToken cancellationToken = default);
 }

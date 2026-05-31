@@ -48,4 +48,10 @@ public class PomodoroRepository : IPomodoroRepository
         _context.PomodoroSessions.Update(session);
         return Task.CompletedTask;
     }
+
+    public Task DeleteAsync(PomodoroSession session, CancellationToken cancellationToken = default)
+    {
+        _context.PomodoroSessions.Remove(session);
+        return Task.CompletedTask;
+    }
 }

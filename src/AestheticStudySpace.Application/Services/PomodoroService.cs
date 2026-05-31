@@ -62,6 +62,26 @@ public class PomodoroService : IPomodoroService
         return session.ToDto();
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Cancelling hard-deletes the session record so it does not appear in history
+    /// and does not trigger any mission/stats updates.
+    /// </remarks>
+    public async Task CancelAsync(Guid userId, CancelPomodoroRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var session = await _pomodoroRepository.GetByIdAsync(request.SessionId, cancellationToken)
+            ?? throw new NotFoundException($"Pomodoro session '{request.SessionId}' was not found.");
+
+        if (session.UserId != userId)
+            throw new UnauthorizedException("You do not have access to this session.");
+
+        if (session.EndTime is not null)
+            throw new ValidationException("Cannot cancel a session that has already ended. Use /end to complete it.");
+
+        await _pomodoroRepository.DeleteAsync(session, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<PagedResult<PomodoroSessionDto>> GetHistoryAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         page = Math.Max(1, page);

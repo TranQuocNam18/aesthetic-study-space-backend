@@ -43,3 +43,17 @@ public record UpdateRoomRequestDto(
     string? ThumbnailUrl,
     string? BackgroundUrl,
     bool IsPremium);
+
+/// <summary>DTO used by authenticated users to create their own custom room.</summary>
+public record UserCreateRoomRequestDto(
+    string Name,
+    string? Description,
+    string? ThumbnailUrl,
+    string? BackgroundUrl);
+
+/// <summary>DTO used by authenticated users to update their own custom room.</summary>
+public record UserUpdateRoomRequestDto(
+    string Name,
+    string? Description,
+    string? ThumbnailUrl,
+    string? BackgroundUrl);
