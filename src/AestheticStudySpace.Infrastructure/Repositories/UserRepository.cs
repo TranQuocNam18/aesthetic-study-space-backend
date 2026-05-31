@@ -25,7 +25,17 @@ public class UserRepository : IUserRepository
 
     public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
     {
-        _context.Users.Update(user);
+        var entry = _context.ChangeTracker.Entries<User>().FirstOrDefault(e => e.Entity.Id == user.Id);
+        if (entry is not null)
+        {
+            // Entity đang được tracked → cập nhật trực tiếp các property
+            entry.CurrentValues.SetValues(user);
+        }
+        else
+        {
+            // Entity chưa được tracked → attach và đánh dấu Modified
+            _context.Entry(user).State = EntityState.Modified;
+        }
         return Task.CompletedTask;
     }
 }

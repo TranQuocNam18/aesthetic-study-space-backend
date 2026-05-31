@@ -12,7 +12,7 @@ public class PaymentTransactionRepository : IPaymentTransactionRepository
     public PaymentTransactionRepository(AppDbContext context) => _context = context;
 
     public Task<PaymentTransaction?> GetByTransactionCodeAsync(string code, CancellationToken cancellationToken = default) =>
-        _context.PaymentTransactions.Include(x => x.User).FirstOrDefaultAsync(x => x.TransactionCode == code, cancellationToken);
+        _context.PaymentTransactions.FirstOrDefaultAsync(x => x.TransactionCode == code, cancellationToken);
 
     public async Task AddAsync(PaymentTransaction tx, CancellationToken cancellationToken = default) =>
         await _context.PaymentTransactions.AddAsync(tx, cancellationToken);
