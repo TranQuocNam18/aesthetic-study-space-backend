@@ -70,6 +70,10 @@ public class PaymentService : IPaymentService
 
         var cleanDescription = RemoveDiacritics(request.Description ?? "Payment");
 
+        var returnUrl = string.IsNullOrWhiteSpace(request.ReturnUrl) || request.ReturnUrl.Equals("string", StringComparison.OrdinalIgnoreCase)
+            ? "https://aesthetic-study-space-api.onrender.com/api/payment/vnpay/callback"
+            : request.ReturnUrl.Trim();
+
         var vnpParams = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
             ["vnp_Version"] = "2.1.0",
@@ -81,7 +85,7 @@ public class PaymentService : IPaymentService
             ["vnp_OrderInfo"] = cleanDescription,
             ["vnp_OrderType"] = "other",
             ["vnp_Locale"] = "vn",
-            ["vnp_ReturnUrl"] = request.ReturnUrl.Trim(),
+            ["vnp_ReturnUrl"] = returnUrl,
             ["vnp_CreateDate"] = DateTime.UtcNow.ToString("yyyyMMddHHmmss"),
             ["vnp_IpAddr"] = "0.0.0.0"
         };
