@@ -87,6 +87,21 @@ public class AdminService : IAdminService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<AdminUserDto> UpdateUserTierAsync(Guid id, string tier, CancellationToken cancellationToken = default)
+    {
+        if (!Enum.TryParse<AccountTier>(tier, true, out var accountTier))
+            throw new ValidationException($"Invalid tier '{tier}'. Valid values: Free, Premium.");
+
+        var user = await _adminRepository.GetUserByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("User not found.");
+
+        user.AccountTier = accountTier;
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ToDto(user);
+    }
+
     public async Task<AdminOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default)
     {
         return await _analyticsRepository.GetOverviewAsync(cancellationToken);

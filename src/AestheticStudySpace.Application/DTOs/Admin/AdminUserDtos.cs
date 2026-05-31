@@ -11,3 +11,9 @@ public record AdminUserDto(
     DateTime CreatedAt,
     DateTime? LastLoginAt);
 
+/// <summary>
+/// Request body để admin cập nhật AccountTier của user.
+/// Tier hợp lệ: "Free" hoặc "Premium"
+/// </summary>
+public record UpdateUserTierRequestDto(string Tier);
+

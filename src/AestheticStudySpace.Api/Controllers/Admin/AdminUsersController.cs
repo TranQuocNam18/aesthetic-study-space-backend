@@ -49,5 +49,19 @@ public class AdminUsersController : ControllerBase
         await _adminService.DeleteUserAsync(id, cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { deleted = true }));
     }
+
+    /// <summary>
+    /// Cập nhật AccountTier của user (Free ↔ Premium).
+    /// Body: { "tier": "Free" } hoặc { "tier": "Premium" }
+    /// </summary>
+    [HttpPut("{id:guid}/tier")]
+    public async Task<ActionResult<ApiResponse<AdminUserDto>>> UpdateTier(
+        [FromRoute] Guid id,
+        [FromBody] UpdateUserTierRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _adminService.UpdateUserTierAsync(id, request.Tier, cancellationToken);
+        return Ok(ApiResponse<AdminUserDto>.Ok(result));
+    }
 }
 
