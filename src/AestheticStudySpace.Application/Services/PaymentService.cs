@@ -68,6 +68,8 @@ public class PaymentService : IPaymentService
         await _paymentTxRepo.AddAsync(tx, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        var cleanDescription = RemoveDiacritics(request.Description ?? "Payment");
+
         var vnpParams = new SortedDictionary<string, string>(StringComparer.Ordinal)
         {
             ["vnp_Version"] = "2.1.0",
@@ -76,7 +78,7 @@ public class PaymentService : IPaymentService
             ["vnp_Amount"] = (request.AmountVnd * 100).ToString(),
             ["vnp_CurrCode"] = "VND",
             ["vnp_TxnRef"] = txCode,
-            ["vnp_OrderInfo"] = (request.Description ?? "Payment").Trim(),
+            ["vnp_OrderInfo"] = cleanDescription,
             ["vnp_OrderType"] = "other",
             ["vnp_Locale"] = "vn",
             ["vnp_ReturnUrl"] = request.ReturnUrl.Trim(),
@@ -90,6 +92,45 @@ public class PaymentService : IPaymentService
 
         var paymentUrl = $"{_vnPay.BaseUrl}?{queryString}&vnp_SecureHash={secureHash}";
         return new VnPayCreateResponseDto(txCode, paymentUrl);
+    }
+
+    private static string RemoveDiacritics(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "Payment";
+        
+        // Chuyển về dạng không dấu tiếng Việt chuẩn
+        string[] arr1 = new string[] { "á", "à", "ả", "ã", "ạ", "â", "ấ", "ầ", "ẩ", "ẫ", "ậ", "ă", "ắ", "ằ", "ẳ", "ẵ", "ặ",
+            "đ",
+            "é", "è", "ẻ", "ẽ", "ẹ", "ê", "ế", "ề", "ể", "ễ", "ệ",
+            "í", "ì", "ỉ", "ĩ", "ị",
+            "ó", "ò", "ỏ", "õ", "ọ", "ô", "ố", "ồ", "ổ", "ỗ", "ộ", "ơ", "ớ", "ờ", "ở", "ỡ", "ợ",
+            "ú", "ù", "ủ", "ũ", "ụ", "ư", "ứ", "ừ", "ử", "ữ", "ự",
+            "ý", "ỳ", "ỷ", "ỹ", "ỵ",};
+        string[] arr2 = new string[] { "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a", "a",
+            "d",
+            "e", "e", "e", "e", "e", "e", "e", "e", "e", "e", "e",
+            "i", "i", "i", "i", "i",
+            "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o", "o",
+            "u", "u", "u", "u", "u", "u", "u", "u", "u", "u", "u",
+            "y", "y", "y", "y", "y",};
+        for (int i = 0; i < arr1.Length; i++)
+        {
+            text = text.Replace(arr1[i], arr2[i]);
+            text = text.Replace(arr1[i].ToUpper(), arr2[i].ToUpper());
+        }
+        
+        // Loại bỏ các ký tự đặc biệt chỉ giữ lại chữ, số và khoảng trắng
+        var sb = new StringBuilder();
+        foreach (char c in text)
+        {
+            if (char.IsLetterOrDigit(c) || c == ' ' || c == '-' || c == '_')
+            {
+                sb.Append(c);
+            }
+        }
+        
+        var result = sb.ToString().Trim();
+        return string.IsNullOrWhiteSpace(result) ? "Payment" : result;
     }
 
     public async Task HandleVnPayCallbackAsync(IReadOnlyDictionary<string, string> query, CancellationToken cancellationToken = default)
@@ -210,30 +251,10 @@ public class PaymentService : IPaymentService
         await _fulfillment.FulfillIfNeededAsync(tx, cancellationToken);
     }
 
-    private static string BuildQueryString(SortedDictionary<string, string> values)
-    {
-        var query = new StringBuilder();
-        foreach (var kv in values)
-        {
-            if (string.IsNullOrWhiteSpace(kv.Value)) continue;
-
-            if (query.Length > 0)
-            {
-                query.Append('&');
-            }
-
-            // VNPay yêu cầu mã hóa cả Key và Value theo chuẩn, khoảng trắng biến thành %20 thay vì +
-            var encodedKey = System.Net.WebUtility.UrlEncode(kv.Key);
-            var encodedVal = System.Net.WebUtility.UrlEncode(kv.Value);
-            
-            // WebUtility.UrlEncode biến khoảng trắng thành "+", ta cần đổi lại thành "%20" chuẩn VNPay
-            encodedKey = encodedKey.Replace("+", "%20");
-            encodedVal = encodedVal.Replace("+", "%20");
-
-            query.Append(encodedKey).Append('=').Append(encodedVal);
-        }
-        return query.ToString();
-    }
+    private static string BuildQueryString(SortedDictionary<string, string> values) =>
+        string.Join("&", values
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+            .Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
 
     private static string HmacSha512Hex(string secret, string data)
     {
