@@ -210,10 +210,30 @@ public class PaymentService : IPaymentService
         await _fulfillment.FulfillIfNeededAsync(tx, cancellationToken);
     }
 
-    private static string BuildQueryString(SortedDictionary<string, string> values) =>
-        string.Join("&", values
-            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
-            .Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
+    private static string BuildQueryString(SortedDictionary<string, string> values)
+    {
+        var query = new StringBuilder();
+        foreach (var kv in values)
+        {
+            if (string.IsNullOrWhiteSpace(kv.Value)) continue;
+
+            if (query.Length > 0)
+            {
+                query.Append('&');
+            }
+
+            // VNPay yêu cầu mã hóa cả Key và Value theo chuẩn, khoảng trắng biến thành %20 thay vì +
+            var encodedKey = System.Net.WebUtility.UrlEncode(kv.Key);
+            var encodedVal = System.Net.WebUtility.UrlEncode(kv.Value);
+            
+            // WebUtility.UrlEncode biến khoảng trắng thành "+", ta cần đổi lại thành "%20" chuẩn VNPay
+            encodedKey = encodedKey.Replace("+", "%20");
+            encodedVal = encodedVal.Replace("+", "%20");
+
+            query.Append(encodedKey).Append('=').Append(encodedVal);
+        }
+        return query.ToString();
+    }
 
     private static string HmacSha512Hex(string secret, string data)
     {
