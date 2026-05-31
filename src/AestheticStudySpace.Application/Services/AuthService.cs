@@ -128,10 +128,18 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(_googleClientId))
             throw new InvalidOperationException("GoogleAuth:ClientId is not configured.");
 
-        var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+        GoogleJsonWebSignature.Payload payload;
+        try
         {
-            Audience = new[] { _googleClientId }
-        });
+            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { _googleClientId }
+            });
+        }
+        catch (InvalidJwtException ex)
+        {
+            throw new UnauthorizedException($"Invalid Google ID token: {ex.Message}");
+        }
 
         var email = payload.Email?.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(email))
