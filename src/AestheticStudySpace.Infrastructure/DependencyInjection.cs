@@ -21,7 +21,7 @@ public static class DependencyInjection
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
-        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        services.Configure<ResendSettings>(configuration.GetSection(ResendSettings.SectionName));
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
         services.Configure<VnPaySettings>(configuration.GetSection(VnPaySettings.SectionName));
         services.Configure<SePaySettings>(configuration.GetSection(SePaySettings.SectionName));
@@ -62,7 +62,10 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IMediaStorageService, CloudinaryMediaStorageService>();
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        
+        // Email sending via Resend
+        services.AddHttpClient<ResendEmailSender>();
+        services.AddScoped<IEmailSender, ResendEmailSender>();
 
         var jwt = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are not configured.");
