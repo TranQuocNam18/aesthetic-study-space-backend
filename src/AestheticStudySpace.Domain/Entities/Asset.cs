@@ -11,7 +11,6 @@ public class Asset : BaseEntity
     public AssetCategory Category { get; set; }
     public int DefaultVolume { get; set; } = 70;
     public bool IsPremium { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<RoomAssetMapping> RoomMappings { get; set; } = new List<RoomAssetMapping>();
 }

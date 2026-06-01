@@ -29,6 +29,8 @@ public class ExceptionHandlingMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        var isDevelopment = context.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() ?? false;
+        
         var (statusCode, response) = exception switch
         {
             ValidationException validation => (HttpStatusCode.BadRequest, new ErrorResponse
@@ -47,6 +49,11 @@ public class ExceptionHandlingMiddleware
                 Success = false,
                 Message = unauthorized.Message
             }),
+            ForbiddenException forbidden => (HttpStatusCode.Forbidden, new ErrorResponse
+            {
+                Success = false,
+                Message = forbidden.Message
+            }),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, new ErrorResponse
             {
                 Success = false,
@@ -55,12 +62,19 @@ public class ExceptionHandlingMiddleware
             _ => (HttpStatusCode.InternalServerError, new ErrorResponse
             {
                 Success = false,
-                Message = "An unexpected error occurred."
+                Message = isDevelopment ? $"Error: {exception.GetType().Name} - {exception.Message}" : "An unexpected error occurred.",
+                Debug = isDevelopment ? new 
+                { 
+                    Exception = exception.GetType().Name,
+                    Message = exception.Message,
+                    StackTrace = exception.StackTrace,
+                    InnerException = exception.InnerException?.Message
+                } : null
             })
         };
 
         if (statusCode == HttpStatusCode.InternalServerError)
-            _logger.LogError(exception, "Unhandled exception");
+            _logger.LogError(exception, "Unhandled exception: {ExceptionType}", exception.GetType().Name);
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
@@ -74,5 +88,6 @@ public class ExceptionHandlingMiddleware
         public bool Success { get; init; }
         public string Message { get; init; } = string.Empty;
         public IDictionary<string, string[]>? Errors { get; init; }
+        public object? Debug { get; init; }
     }
 }

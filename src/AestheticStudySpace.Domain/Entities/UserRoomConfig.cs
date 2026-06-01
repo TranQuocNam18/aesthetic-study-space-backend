@@ -7,5 +7,4 @@ public class UserRoomConfig : BaseEntity
     public Guid RoomId { get; set; }
     public Room Room { get; set; } = null!;
     public string JsonConfig { get; set; } = "{}";
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -12,11 +12,13 @@ namespace AestheticStudySpace.Application.Services;
 public class PomodoroService : IPomodoroService
 {
     private readonly IPomodoroRepository _pomodoroRepository;
+    private readonly IMissionService _missionService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public PomodoroService(IPomodoroRepository pomodoroRepository, IUnitOfWork unitOfWork)
+    public PomodoroService(IPomodoroRepository pomodoroRepository, IMissionService missionService, IUnitOfWork unitOfWork)
     {
         _pomodoroRepository = pomodoroRepository;
+        _missionService = missionService;
         _unitOfWork = unitOfWork;
     }
 
@@ -55,7 +57,29 @@ public class PomodoroService : IPomodoroService
         session.EndTime = DateTime.UtcNow;
         await _pomodoroRepository.UpdateAsync(session, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _missionService.IncrementByTriggerKeyAsync(userId, "pomodoro_complete", 1, cancellationToken);
         return session.ToDto();
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Cancelling hard-deletes the session record so it does not appear in history
+    /// and does not trigger any mission/stats updates.
+    /// </remarks>
+    public async Task CancelAsync(Guid userId, CancelPomodoroRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var session = await _pomodoroRepository.GetByIdAsync(request.SessionId, cancellationToken)
+            ?? throw new NotFoundException($"Pomodoro session '{request.SessionId}' was not found.");
+
+        if (session.UserId != userId)
+            throw new UnauthorizedException("You do not have access to this session.");
+
+        if (session.EndTime is not null)
+            throw new ValidationException("Cannot cancel a session that has already ended. Use /end to complete it.");
+
+        await _pomodoroRepository.DeleteAsync(session, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<PagedResult<PomodoroSessionDto>> GetHistoryAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
@@ -73,5 +97,13 @@ public class PomodoroService : IPomodoroService
             PageSize = pageSize,
             TotalCount = total
         };
+    }
+
+    public async Task<PomodoroStatsDto> GetStatsAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var (s7, m7) = await _pomodoroRepository.GetStatsAsync(userId, now.AddDays(-7), now, cancellationToken);
+        var (s30, m30) = await _pomodoroRepository.GetStatsAsync(userId, now.AddDays(-30), now, cancellationToken);
+        return new PomodoroStatsDto(s7, m7, s30, m30);
     }
 }

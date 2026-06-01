@@ -8,17 +8,87 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: PORT
+        value: "8080"
+      
+      # Database
       - key: ConnectionStrings__DefaultConnection
         sync: false
+      - key: Database__Provider
+        value: PostgreSQL
+      
+      # JWT
       - key: Jwt__Secret
         sync: false
       - key: Jwt__Issuer
         value: AestheticStudySpace
       - key: Jwt__Audience
         value: AestheticStudySpace.Client
+      - key: Jwt__AccessTokenMinutes
+        value: "60"
+      
+      # CORS - Update với frontend URLs
       - key: Cors__AllowedOrigins__0
         value: https://aestheticspaceproject.vercel.app
       - key: Cors__AllowedOrigins__1
         value: https://aestheticspaceprojectpreview.vercel.app
-      - key: Database__Provider
-        value: PostgreSQL
+      - key: Cors__AllowedOrigins__2
+        value: http://localhost:3000
+      - key: Cors__AllowedOrigins__3
+        value: http://localhost:5173
+      
+      # Google Auth
+      - key: GoogleAuth__ClientId
+        value: 93986424674-su4gm2fajphe67jtso7r585igq1d1eul.apps.googleusercontent.com
+      
+      # Payment - VNPay
+      - key: VNPay__TmnCode
+        sync: false
+      - key: VNPay__HashSecret
+        sync: false
+      - key: VNPay__BaseUrl
+        value: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      
+      # Payment - SePay
+      - key: SePay__WebhookSecret
+        sync: false
+      
+      # Email (SMTP)
+      - key: Smtp__Host
+        value: smtp.gmail.com
+      - key: Smtp__Port
+        value: "587"
+      - key: Smtp__EnableSsl
+        value: "true"
+      - key: Smtp__Username
+        sync: false
+      - key: Smtp__Password
+        sync: false
+      - key: Smtp__FromEmail
+        sync: false
+      - key: Smtp__FromName
+        value: Aesthetic Study Space
+      
+      # Cloudinary (Media Storage)
+      - key: Cloudinary__CloudName
+        sync: false
+      - key: Cloudinary__ApiKey
+        sync: false
+      - key: Cloudinary__ApiSecret
+        sync: false
+      
+      # App Settings
+      - key: App__FrontendBaseUrl
+        value: https://aestheticspaceproject.vercel.app
+      
+      # Logging
+      - key: Logging__LogLevel__Default
+        value: Information
+      - key: Logging__LogLevel__Microsoft
+        value: Warning
+      
+      # Swagger
+      - key: Swagger__Enabled
+        value: "false"

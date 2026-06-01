@@ -10,3 +10,8 @@ public record PomodoroSessionDto(
     bool IsActive);
 
 public record EndPomodoroRequestDto(Guid SessionId);
+
+/// <summary>
+/// Cancels an active Pomodoro session without saving it to history.
+/// </summary>
+public record CancelPomodoroRequestDto(Guid SessionId);

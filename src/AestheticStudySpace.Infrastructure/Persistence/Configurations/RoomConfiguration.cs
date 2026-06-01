@@ -14,5 +14,13 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
         builder.Property(r => r.Description).HasMaxLength(500);
         builder.Property(r => r.ThumbnailUrl).HasMaxLength(2048);
         builder.Property(r => r.BackgroundUrl).HasMaxLength(2048);
+
+        // Optional FK: null means admin/global room, non-null means user-created room
+        builder.Property(r => r.UserId).IsRequired(false);
+        builder.HasOne(r => r.Owner)
+               .WithMany()
+               .HasForeignKey(r => r.UserId)
+               .OnDelete(DeleteBehavior.Cascade)
+               .IsRequired(false);
     }
 }

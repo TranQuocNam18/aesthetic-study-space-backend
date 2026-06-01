@@ -2,6 +2,7 @@ using AestheticStudySpace.Application.Interfaces.Repositories;
 using AestheticStudySpace.Domain.Entities;
 using AestheticStudySpace.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using AestheticStudySpace.Application.Common;
 
 namespace AestheticStudySpace.Infrastructure.Repositories;
 
@@ -12,7 +13,11 @@ public class RefreshTokenRepository : IRefreshTokenRepository
     public RefreshTokenRepository(AppDbContext context) => _context = context;
 
     public Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default) =>
-        _context.RefreshTokens.Include(t => t.User).FirstOrDefaultAsync(t => t.Token == token, cancellationToken);
+        _context.RefreshTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(
+                t => t.TokenHash == CryptoUtils.Sha256Hex(token) || t.Token == token,
+                cancellationToken);
 
     public async Task AddAsync(RefreshToken refreshToken, CancellationToken cancellationToken = default) =>
         await _context.RefreshTokens.AddAsync(refreshToken, cancellationToken);

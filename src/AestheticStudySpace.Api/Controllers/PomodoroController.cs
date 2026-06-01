@@ -32,6 +32,18 @@ public class PomodoroController : ControllerBase
         return Ok(ApiResponse<PomodoroSessionDto>.Ok(session, "Pomodoro ended."));
     }
 
+    /// <summary>
+    /// Cancel an active Pomodoro session.
+    /// The session is permanently deleted and will not appear in history or affect stats/missions.
+    /// </summary>
+    [HttpPost("cancel")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<object>>> Cancel([FromBody] CancelPomodoroRequestDto request, CancellationToken cancellationToken)
+    {
+        await _pomodoroService.CancelAsync(User.GetUserId(), request, cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { }, "Pomodoro session cancelled."));
+    }
+
     [HttpGet("history")]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<PomodoroSessionDto>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<PagedResult<PomodoroSessionDto>>>> History(
@@ -41,5 +53,13 @@ public class PomodoroController : ControllerBase
     {
         var history = await _pomodoroService.GetHistoryAsync(User.GetUserId(), page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResult<PomodoroSessionDto>>.Ok(history));
+    }
+
+    [HttpGet("stats")]
+    [ProducesResponseType(typeof(ApiResponse<PomodoroStatsDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<PomodoroStatsDto>>> Stats(CancellationToken cancellationToken = default)
+    {
+        var stats = await _pomodoroService.GetStatsAsync(User.GetUserId(), cancellationToken);
+        return Ok(ApiResponse<PomodoroStatsDto>.Ok(stats));
     }
 }
