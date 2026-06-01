@@ -58,7 +58,15 @@ public class PomodoroService : IPomodoroService
         await _pomodoroRepository.UpdateAsync(session, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _missionService.IncrementByTriggerKeyAsync(userId, "pomodoro_complete", 1, cancellationToken);
+        var actualMinutes = (session.EndTime.Value - session.StartTime).TotalMinutes;
+        var minimumMinutes = Math.Max(1, session.DurationMinutes * 0.8);
+        if (actualMinutes >= minimumMinutes)
+        {
+            await _missionService.IncrementByTriggerKeyAsync(userId, "pomodoro_complete", 1, cancellationToken);
+            var studyMinutes = Math.Max(1, (int)Math.Round(actualMinutes));
+            await _missionService.IncrementByTriggerKeyAsync(userId, "study_minutes", studyMinutes, cancellationToken);
+        }
+
         return session.ToDto();
     }
 

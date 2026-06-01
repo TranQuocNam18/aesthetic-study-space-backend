@@ -17,10 +17,11 @@ public class MissionsController : ControllerBase
     public MissionsController(IMissionService missionService) => _missionService = missionService;
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<MissionDto>>>> GetActive(CancellationToken cancellationToken = default)
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<MissionWithProgressDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<MissionWithProgressDto>>>> GetActive(CancellationToken cancellationToken = default)
     {
-        var missions = await _missionService.GetActiveAsync(cancellationToken);
-        return ApiResponse<IReadOnlyList<MissionDto>>.Ok(missions);
+        var missions = await _missionService.GetForUserAsync(User.GetUserId(), cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<MissionWithProgressDto>>.Ok(missions));
     }
 
     [HttpPost("{id:guid}/claim")]

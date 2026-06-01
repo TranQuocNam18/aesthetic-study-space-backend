@@ -1,3 +1,4 @@
+using AestheticStudySpace.Application.Common;
 using AestheticStudySpace.Application.DTOs.Missions;
 using AestheticStudySpace.Application.Interfaces;
 using AestheticStudySpace.Application.Interfaces.Repositories;
@@ -36,6 +37,19 @@ public class MissionService : IMissionService
         return missions.Select(ToDto).ToList();
     }
 
+    public async Task<IReadOnlyList<MissionWithProgressDto>> GetForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var missions = await _missionRepository.GetActiveAsync(cancellationToken);
+        var progressRows = await _userMissionRepository.GetByUserAsync(userId, cancellationToken);
+
+        return missions.Select(m =>
+        {
+            var period = MissionPeriodHelper.GetPeriodDate(m.Frequency);
+            var um = progressRows.FirstOrDefault(x => x.MissionId == m.Id && x.PeriodDate == period);
+            return ToProgressDto(m, um, period);
+        }).ToList();
+    }
+
     public async Task<UserMissionDto> IncrementAsync(Guid userId, Guid missionId, int delta, CancellationToken cancellationToken = default)
     {
         if (delta <= 0)
@@ -47,7 +61,7 @@ public class MissionService : IMissionService
         if (!mission.IsActive)
             throw new ValidationException("Mission is not active.");
 
-        var period = DateOnly.FromDateTime(DateTime.UtcNow);
+        var period = MissionPeriodHelper.GetPeriodDate(mission.Frequency);
         var userMission = await _userMissionRepository.GetForPeriodAsync(userId, missionId, period, cancellationToken);
 
         if (userMission is null)
@@ -85,9 +99,7 @@ public class MissionService : IMissionService
 
         var missions = await _missionRepository.GetActiveByTriggerKeyAsync(triggerKey.Trim(), cancellationToken);
         foreach (var mission in missions)
-        {
             await IncrementAsync(userId, mission.Id, delta, cancellationToken);
-        }
     }
 
     public async Task<UserMissionDto> ClaimAsync(Guid userId, Guid missionId, CancellationToken cancellationToken = default)
@@ -95,7 +107,7 @@ public class MissionService : IMissionService
         var mission = await _missionRepository.GetByIdAsync(missionId, cancellationToken)
             ?? throw new NotFoundException("Mission not found.");
 
-        var period = DateOnly.FromDateTime(DateTime.UtcNow);
+        var period = MissionPeriodHelper.GetPeriodDate(mission.Frequency);
         var userMission = await _userMissionRepository.GetForPeriodAsync(userId, missionId, period, cancellationToken)
             ?? throw new ValidationException("Mission progress not found for current period.");
 
@@ -108,30 +120,48 @@ public class MissionService : IMissionService
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException("User not found.");
 
+        if (user.IsBanned)
+            throw new UnauthorizedException("User is banned.");
+
         user.CoinsBalance += mission.RewardCoins;
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         userMission.ClaimedAt = DateTime.UtcNow;
         await _userMissionRepository.UpdateAsync(userMission, cancellationToken);
 
-        var tx = new CoinTransaction
+        await _coinTransactionRepository.AddAsync(new CoinTransaction
         {
             UserId = userId,
             Type = CoinTransactionType.Earned,
             Amount = mission.RewardCoins,
             Reason = $"Mission:{mission.Code}",
             RelatedMissionId = mission.Id
-        };
-        await _coinTransactionRepository.AddAsync(tx, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(userMission);
     }
 
     private static MissionDto ToDto(Mission m) =>
         new(m.Id, m.Code, m.Name, m.Description, m.RewardCoins, m.TriggerKey, m.TargetValue, m.Frequency);
 
+    private static MissionWithProgressDto ToProgressDto(Mission m, UserMission? um, DateOnly period) =>
+        new(
+            m.Id,
+            m.Code,
+            m.Name,
+            m.Description,
+            m.RewardCoins,
+            m.TriggerKey,
+            m.TargetValue,
+            m.Frequency,
+            um?.ProgressValue ?? 0,
+            um?.IsCompleted ?? false,
+            um?.ClaimedAt is not null,
+            um?.PeriodDate ?? period,
+            um?.CompletedAt,
+            um?.ClaimedAt);
+
     private static UserMissionDto ToDto(UserMission um) =>
         new(um.MissionId, um.ProgressValue, um.IsCompleted, um.PeriodDate, um.CompletedAt, um.ClaimedAt);
 }
-

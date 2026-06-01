@@ -3,6 +3,7 @@ using AestheticStudySpace.Application.Interfaces;
 using AestheticStudySpace.Application.Interfaces.Repositories;
 using AestheticStudySpace.Application.Interfaces.Services;
 using AestheticStudySpace.Application.Common;
+using AestheticStudySpace.Infrastructure.BackgroundServices;
 using AestheticStudySpace.Infrastructure.Integrations;
 using AestheticStudySpace.Infrastructure.Identity;
 using AestheticStudySpace.Infrastructure.Persistence;
@@ -100,6 +101,7 @@ public static class DependencyInjection
             });
 
         services.AddAuthorization();
+        services.AddHostedService<MissionResetWorker>();
 
         return services;
     }

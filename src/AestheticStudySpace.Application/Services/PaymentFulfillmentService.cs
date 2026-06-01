@@ -93,6 +93,16 @@ public class PaymentFulfillmentService : IPaymentFulfillmentService
 
         user.AccountTier = AccountTier.Premium;
         await _userRepository.UpdateAsync(user, cancellationToken);
+
+        if (!await _storeRepository.HasPurchaseForPaymentAsync(tx.Id, cancellationToken))
+        {
+            await _storeRepository.AddPurchaseAsync(new Purchase
+            {
+                UserId = user.Id,
+                AmountVnd = tx.Amount,
+                PaymentTransactionId = tx.Id
+            }, cancellationToken);
+        }
     }
 
     private async Task FulfillBuyCoinsAsync(User user, PaymentTransaction tx, CancellationToken cancellationToken)

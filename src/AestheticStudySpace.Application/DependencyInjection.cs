@@ -14,6 +14,9 @@ public static class DependencyInjection
         services.AddScoped<IWorkspaceService, WorkspaceService>();
         services.AddScoped<IRoomLayoutService, RoomLayoutService>();
         services.AddScoped<IStoreService, StoreService>();
+        services.AddScoped<IAdminStoreService, AdminStoreService>();
+        services.AddScoped<IAdminMissionService, AdminMissionService>();
+        services.AddScoped<ICoinService, CoinService>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IPaymentFulfillmentService, PaymentFulfillmentService>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();

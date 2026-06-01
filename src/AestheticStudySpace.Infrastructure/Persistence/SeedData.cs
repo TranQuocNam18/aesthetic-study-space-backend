@@ -20,6 +20,12 @@ public static class SeedData
     public static readonly Guid WhiteNoiseAssetId = Guid.Parse("33333333-3333-3333-3333-333333333303");
     public static readonly Guid CatAssetId = Guid.Parse("33333333-3333-3333-3333-333333333304");
     public static readonly Guid LofiPremiumAssetId = Guid.Parse("33333333-3333-3333-3333-333333333305");
+    public static readonly Guid StoreThemeStarterId = Guid.Parse("44444444-4444-4444-4444-444444444401");
+    public static readonly Guid StoreBackgroundRainId = Guid.Parse("44444444-4444-4444-4444-444444444402");
+    public static readonly Guid StoreStickerCatId = Guid.Parse("44444444-4444-4444-4444-444444444403");
+    public static readonly Guid MissionDailyLoginId = Guid.Parse("55555555-5555-5555-5555-555555555501");
+    public static readonly Guid MissionPomodoroId = Guid.Parse("55555555-5555-5555-5555-555555555502");
+    public static readonly Guid MissionWeeklyStudyId = Guid.Parse("55555555-5555-5555-5555-555555555503");
 
     public static async Task InitializeAsync(IServiceProvider serviceProvider)
     {
@@ -161,8 +167,90 @@ public static class SeedData
         if (!await context.RoomAssetMappings.AnyAsync())
             await context.RoomAssetMappings.AddRangeAsync(mappings);
 
+        if (!await context.StoreItems.AnyAsync())
+        {
+            await context.StoreItems.AddRangeAsync(
+                new StoreItem
+                {
+                    Id = StoreThemeStarterId,
+                    Category = StoreCategory.Theme,
+                    Name = "Cozy Starter Theme",
+                    Description = "Free warm theme for new users.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/theme-cozy.jpg",
+                    IsPremium = false,
+                    CoinPrice = null,
+                    RealMoneyPriceVnd = null,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreBackgroundRainId,
+                    Category = StoreCategory.Background,
+                    Name = "Rainy Window",
+                    Description = "Calm rain background.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/bg-rain.jpg",
+                    IsPremium = false,
+                    CoinPrice = 150,
+                    RealMoneyPriceVnd = null,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreStickerCatId,
+                    Category = StoreCategory.Sticker,
+                    Name = "Premium Cat Sticker",
+                    Description = "Animated cat sticker — Premium users only.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/sticker-cat.gif",
+                    IsPremium = true,
+                    CoinPrice = 300,
+                    RealMoneyPriceVnd = 29000,
+                    IsActive = true
+                });
+        }
+
+        if (!await context.Missions.AnyAsync())
+        {
+            await context.Missions.AddRangeAsync(
+                new Mission
+                {
+                    Id = MissionDailyLoginId,
+                    Code = "daily_login",
+                    Name = "Daily Login",
+                    Description = "Log in once per day.",
+                    RewardCoins = 10,
+                    TriggerKey = "daily_login",
+                    TargetValue = 1,
+                    Frequency = "daily",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionPomodoroId,
+                    Code = "pomodoro_daily",
+                    Name = "Focus Sessions",
+                    Description = "Complete 4 Pomodoro sessions today.",
+                    RewardCoins = 25,
+                    TriggerKey = "pomodoro_complete",
+                    TargetValue = 4,
+                    Frequency = "daily",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionWeeklyStudyId,
+                    Code = "weekly_study",
+                    Name = "Weekly Study Goal",
+                    Description = "Accumulate 300 minutes of study this week.",
+                    RewardCoins = 100,
+                    TriggerKey = "study_minutes",
+                    TargetValue = 300,
+                    Frequency = "weekly",
+                    IsActive = true
+                });
+        }
+
         await context.SaveChangesAsync();
 
-        logger.LogInformation("Database seeded with sample rooms, assets, and admin user.");
+        logger.LogInformation("Database seeded with sample rooms, assets, store items, missions, and admin user.");
     }
 }
