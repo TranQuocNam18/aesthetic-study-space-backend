@@ -19,9 +19,13 @@ public class SmtpEmailSender : IEmailSender
 
     public async Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_settings.Host) || string.IsNullOrWhiteSpace(_settings.FromEmail))
+        if (string.IsNullOrWhiteSpace(_settings.Host)
+            || string.IsNullOrWhiteSpace(_settings.FromEmail)
+            || !_settings.FromEmail.Contains('@'))
         {
-            _logger.LogWarning("SMTP is not configured (Host or FromEmail is missing). Skipping email to {ToEmail} with subject '{Subject}'.", toEmail, subject);
+            _logger.LogWarning(
+                "SMTP is not configured properly (Host='{Host}', FromEmail='{FromEmail}'). Skipping email to {ToEmail} with subject '{Subject}'.",
+                _settings.Host, _settings.FromEmail, toEmail, subject);
             return;
         }
 
