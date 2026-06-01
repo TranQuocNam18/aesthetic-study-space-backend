@@ -196,16 +196,6 @@ public class AuthService : IAuthService
         var token = GenerateToken();
         var tokenHash = Sha256Hex(token);
 
-        var reset = new PasswordResetToken
-        {
-            UserId = user.Id,
-            TokenHash = tokenHash,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(30)
-        };
-
-        await _passwordResetTokenRepository.AddAsync(reset, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
         var link = string.IsNullOrWhiteSpace(_frontendBaseUrl)
             ? token
             : $"{_frontendBaseUrl.TrimEnd('/')}/reset-password?token={Uri.EscapeDataString(token)}";
@@ -217,7 +207,20 @@ public class AuthService : IAuthService
 <p>If you didn't request this, you can ignore this email.</p>
 """;
 
+        // Send email BEFORE saving token to database
+        // This way, if email fails, token won't be created unnecessarily
         await _emailSender.SendAsync(email, "Reset your password", body, cancellationToken);
+
+        // Only save token if email was sent successfully
+        var reset = new PasswordResetToken
+        {
+            UserId = user.Id,
+            TokenHash = tokenHash,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(30)
+        };
+
+        await _passwordResetTokenRepository.AddAsync(reset, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequestDto request, CancellationToken cancellationToken = default)
