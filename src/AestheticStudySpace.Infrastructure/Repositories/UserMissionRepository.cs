@@ -38,7 +38,13 @@ public class UserMissionRepository : IUserMissionRepository
 
     public Task UpdateAsync(UserMission userMission, CancellationToken cancellationToken = default)
     {
-        _context.UserMissions.Update(userMission);
+        var entry = _context.Entry(userMission);
+        if (entry.State is EntityState.Added or EntityState.Modified)
+            return Task.CompletedTask;
+
+        if (entry.State == EntityState.Detached)
+            _context.UserMissions.Update(userMission);
+
         return Task.CompletedTask;
     }
 }

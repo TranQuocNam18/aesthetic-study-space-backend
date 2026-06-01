@@ -15,6 +15,11 @@ public class AdminMissionService : IAdminMissionService
         "daily", "weekly", "once"
     };
 
+    private static readonly HashSet<string> AllowedTriggerKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "daily_login", "pomodoro_complete", "study_minutes"
+    };
+
     private readonly IMissionRepository _missionRepository;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -126,6 +131,9 @@ public class AdminMissionService : IAdminMissionService
 
         if (string.IsNullOrWhiteSpace(triggerKey))
             throw new ValidationException("TriggerKey is required.");
+
+        if (!AllowedTriggerKeys.Contains(triggerKey.Trim()))
+            throw new ValidationException("TriggerKey must be daily_login, pomodoro_complete, or study_minutes.");
 
         if (rewardCoins <= 0)
             throw new ValidationException("RewardCoins must be positive.");

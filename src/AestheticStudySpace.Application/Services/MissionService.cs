@@ -63,8 +63,9 @@ public class MissionService : IMissionService
 
         var period = MissionPeriodHelper.GetPeriodDate(mission.Frequency);
         var userMission = await _userMissionRepository.GetForPeriodAsync(userId, missionId, period, cancellationToken);
+        var isNew = userMission is null;
 
-        if (userMission is null)
+        if (isNew)
         {
             userMission = new UserMission
             {
@@ -76,7 +77,7 @@ public class MissionService : IMissionService
             await _userMissionRepository.AddAsync(userMission, cancellationToken);
         }
 
-        if (userMission.IsCompleted)
+        if (userMission!.IsCompleted)
             return ToDto(userMission);
 
         userMission.ProgressValue += delta;
@@ -87,7 +88,10 @@ public class MissionService : IMissionService
             userMission.CompletedAt = DateTime.UtcNow;
         }
 
-        await _userMissionRepository.UpdateAsync(userMission, cancellationToken);
+        // Do not call Update on a newly Added entity — EF would switch to Modified and issue UPDATE instead of INSERT.
+        if (!isNew)
+            await _userMissionRepository.UpdateAsync(userMission, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(userMission);
     }
