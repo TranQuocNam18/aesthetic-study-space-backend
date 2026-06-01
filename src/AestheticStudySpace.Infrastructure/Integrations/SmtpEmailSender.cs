@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using AestheticStudySpace.Application.Interfaces.Services;
+using AestheticStudySpace.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -21,13 +22,13 @@ public class SmtpEmailSender : IEmailSender
     {
         // Validate SMTP configuration
         if (string.IsNullOrWhiteSpace(_settings.Host))
-            throw new InvalidOperationException("SMTP Host is not configured. Set Smtp:Host environment variable.");
+            throw new ValidationException("SMTP server is not configured. Please contact support.");
 
         if (string.IsNullOrWhiteSpace(_settings.FromEmail))
-            throw new InvalidOperationException("SMTP FromEmail is not configured. Set Smtp:FromEmail environment variable.");
+            throw new ValidationException("SMTP sender email is not configured. Please contact support.");
 
         if (!_settings.FromEmail.Contains('@'))
-            throw new InvalidOperationException($"SMTP FromEmail '{_settings.FromEmail}' is not a valid email address.");
+            throw new ValidationException("SMTP sender email configuration is invalid. Please contact support.");
 
         try
         {
@@ -63,7 +64,7 @@ public class SmtpEmailSender : IEmailSender
             _logger.LogError(ex,
                 "SMTP error sending email to {ToEmail}. SmtpStatusCode: {StatusCode}. Details: {Message}",
                 toEmail, ex.StatusCode, ex.Message);
-            throw new InvalidOperationException($"Failed to send email to {toEmail}: {ex.Message}", ex);
+            throw new ValidationException($"Failed to send email. Please try again later. (Error: {ex.StatusCode})");
         }
         catch (Exception ex)
         {
