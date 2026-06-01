@@ -5,6 +5,7 @@ using AestheticStudySpace.Application.DTOs.Payments;
 using AestheticStudySpace.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace AestheticStudySpace.Api.Controllers;
 
@@ -13,8 +14,13 @@ namespace AestheticStudySpace.Api.Controllers;
 public class PaymentController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
+    private readonly string _frontendBaseUrl;
 
-    public PaymentController(IPaymentService paymentService) => _paymentService = paymentService;
+    public PaymentController(IPaymentService paymentService, IConfiguration configuration)
+    {
+        _paymentService = paymentService;
+        _frontendBaseUrl = (configuration["App:FrontendBaseUrl"] ?? "http://localhost:3000").TrimEnd('/');
+    }
 
     [HttpPost("vnpay/create")]
     [Authorize]
@@ -29,9 +35,16 @@ public class PaymentController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> VnPayCallback(CancellationToken cancellationToken = default)
     {
-        var dict = Request.Query.ToDictionary(kv => kv.Key, kv => kv.Value.ToString());
-        await _paymentService.HandleVnPayCallbackAsync(dict, cancellationToken);
-        return Ok(ApiResponse<object>.Ok(new { ok = true }));
+        try
+        {
+            var dict = Request.Query.ToDictionary(kv => kv.Key, kv => kv.Value.ToString());
+            await _paymentService.HandleVnPayCallbackAsync(dict, cancellationToken);
+            return Redirect($"{_frontendBaseUrl}/payment/result?status=success");
+        }
+        catch
+        {
+            return Redirect($"{_frontendBaseUrl}/payment/result?status=failed");
+        }
     }
 
     [HttpPost("sepay/create")]

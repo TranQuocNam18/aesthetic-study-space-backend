@@ -55,3 +55,15 @@ public class ResetPasswordRequestDtoValidator : AbstractValidator<ResetPasswordR
     }
 }
 
+public class UpdateUsernameRequestDtoValidator : AbstractValidator<UpdateUsernameRequestDto>
+{
+    public UpdateUsernameRequestDtoValidator()
+    {
+        RuleFor(x => x.NewUsername)
+            .NotEmpty().WithMessage("New username is required.")
+            .MinimumLength(3).WithMessage("Username must be at least 3 characters.")
+            .MaximumLength(30).WithMessage("Username must be at most 30 characters.")
+            .Matches(@"^[a-zA-Z0-9_\.]+$").WithMessage("Username can only contain letters, numbers, underscores and dots.");
+    }
+}
+

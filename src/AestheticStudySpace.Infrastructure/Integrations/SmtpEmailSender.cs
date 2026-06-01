@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using AestheticStudySpace.Application.Interfaces.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace AestheticStudySpace.Infrastructure.Integrations;
@@ -8,13 +9,21 @@ namespace AestheticStudySpace.Infrastructure.Integrations;
 public class SmtpEmailSender : IEmailSender
 {
     private readonly SmtpSettings _settings;
+    private readonly ILogger<SmtpEmailSender> _logger;
 
-    public SmtpEmailSender(IOptions<SmtpSettings> settings) => _settings = settings.Value;
+    public SmtpEmailSender(IOptions<SmtpSettings> settings, ILogger<SmtpEmailSender> logger)
+    {
+        _settings = settings.Value;
+        _logger = logger;
+    }
 
     public async Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(_settings.Host) || string.IsNullOrWhiteSpace(_settings.FromEmail))
-            throw new InvalidOperationException("SMTP settings are not configured.");
+        {
+            _logger.LogWarning("SMTP is not configured (Host or FromEmail is missing). Skipping email to {ToEmail} with subject '{Subject}'.", toEmail, subject);
+            return;
+        }
 
         using var message = new MailMessage
         {

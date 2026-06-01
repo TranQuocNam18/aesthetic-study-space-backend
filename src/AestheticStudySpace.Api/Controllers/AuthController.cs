@@ -1,6 +1,7 @@
 using AestheticStudySpace.Application.Common;
 using AestheticStudySpace.Application.DTOs.Auth;
 using AestheticStudySpace.Application.Interfaces.Services;
+using AestheticStudySpace.Api.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -79,5 +80,16 @@ public class AuthController : ControllerBase
     {
         await _authService.ResetPasswordAsync(request, cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { ok = true }, "Password updated."));
+    }
+
+    /// <summary>Update the authenticated user's username.</summary>
+    [HttpPut("username")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<UpdateUsernameResponseDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<UpdateUsernameResponseDto>>> UpdateUsername([FromBody] UpdateUsernameRequestDto request, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var result = await _authService.UpdateUsernameAsync(userId, request, cancellationToken);
+        return Ok(ApiResponse<UpdateUsernameResponseDto>.Ok(result, "Username updated successfully."));
     }
 }

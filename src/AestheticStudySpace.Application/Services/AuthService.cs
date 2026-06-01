@@ -323,4 +323,25 @@ public class AuthService : IAuthService
     }
 
     private static string Sha256Hex(string value) => CryptoUtils.Sha256Hex(value);
+
+    public async Task<UpdateUsernameResponseDto> UpdateUsernameAsync(Guid userId, UpdateUsernameRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var newUsername = request.NewUsername?.Trim() ?? string.Empty;
+
+        if (newUsername.Length < 3 || newUsername.Length > 30)
+            throw new ValidationException("Username must be between 3 and 30 characters.");
+
+        var existing = await _userRepository.GetByUsernameAsync(newUsername, cancellationToken);
+        if (existing is not null && existing.Id != userId)
+            throw new ValidationException("Username is already taken.");
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User not found.");
+
+        user.Username = newUsername;
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new UpdateUsernameResponseDto(user.Username);
+    }
 }
