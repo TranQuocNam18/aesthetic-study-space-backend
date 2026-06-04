@@ -145,14 +145,6 @@ public class StoreController : ControllerBase
         return Ok(ApiResponse<StorePurchaseResultDto>.Ok(result));
     }
 
-    /// <summary>Alias for /purchase (backward compatible).</summary>
-    [HttpPost("buy/coins")]
-    [Authorize]
-    public Task<ActionResult<ApiResponse<StorePurchaseResultDto>>> BuyWithCoinsLegacy(
-        [FromBody] BuyWithCoinsRequestDto request,
-        CancellationToken cancellationToken = default) =>
-        PurchaseWithCoins(request, cancellationToken);
-
     // ── Internal helper ────────────────────────────────────────────────────────
 
     private async Task<ActionResult<ApiResponse<PagedResult<StoreItemDto>>>> GetItemsInternal(

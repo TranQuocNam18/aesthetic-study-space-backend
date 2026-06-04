@@ -25,7 +25,6 @@ public static class DependencyInjection
         services.Configure<ResendSettings>(configuration.GetSection(ResendSettings.SectionName));
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
         services.Configure<VnPaySettings>(configuration.GetSection(VnPaySettings.SectionName));
-        services.Configure<SePaySettings>(configuration.GetSection(SePaySettings.SectionName));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
