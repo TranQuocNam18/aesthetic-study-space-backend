@@ -144,6 +144,7 @@ public class StoreService : IStoreService
 
     public async Task<PagedResult<PurchaseHistoryItemDto>> GetPurchaseHistoryAsync(
         Guid userId,
+        PurchaseHistoryKind? kind,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -152,11 +153,9 @@ public class StoreService : IStoreService
         pageSize = Math.Clamp(pageSize, 1, 50);
 
         var index = await _storeRepository.GetPurchaseHistoryIndexAsync(userId, cancellationToken);
-        var total = index.Count;
-        var slice = index.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
-        var purchaseIds = slice.Where(x => x.IsPurchase).Select(x => x.Id).ToList();
-        var paymentIds = slice.Where(x => !x.IsPurchase).Select(x => x.Id).ToList();
+        var purchaseIds = index.Where(x => x.IsPurchase).Select(x => x.Id).ToList();
+        var paymentIds = index.Where(x => !x.IsPurchase).Select(x => x.Id).ToList();
 
         var purchases = await _storeRepository.GetPurchaseHistoryPurchasesAsync(userId, purchaseIds, cancellationToken);
         var subscriptionPayments = await _storeRepository.GetPurchaseHistorySubscriptionPaymentsAsync(userId, paymentIds, cancellationToken);
@@ -164,7 +163,8 @@ public class StoreService : IStoreService
         var purchaseById = purchases.ToDictionary(x => x.Id);
         var paymentById = subscriptionPayments.ToDictionary(x => x.Id);
 
-        var items = slice
+        // Build full history list in sorted order
+        var allItems = index
             .Select(entry =>
             {
                 if (entry.IsPurchase && purchaseById.TryGetValue(entry.Id, out var purchase))
@@ -177,6 +177,13 @@ public class StoreService : IStoreService
             .Cast<PurchaseHistoryItemDto>()
             .ToList();
 
+        // Apply kind filter (in-memory, after projection so Kind is resolved)
+        if (kind is not null)
+            allItems = allItems.Where(x => x.Kind == kind.Value).ToList();
+
+        var total = allItems.Count;
+        var items = allItems.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
         return new PagedResult<PurchaseHistoryItemDto>
         {
             Items = items,
@@ -185,6 +192,7 @@ public class StoreService : IStoreService
             TotalCount = total
         };
     }
+
 
     private static UserInventoryItemDto ToInventoryDto(UserInventory row)
     {

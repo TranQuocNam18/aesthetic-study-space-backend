@@ -21,6 +21,13 @@ public interface IStoreService
 
     Task<StorePurchaseResultDto> BuyWithCoinsAsync(Guid userId, BuyWithCoinsRequestDto request, CancellationToken cancellationToken = default);
 
-    Task<PagedResult<PurchaseHistoryItemDto>> GetPurchaseHistoryAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns the user's purchase history, optionally filtered by <paramref name="kind"/>.
+    /// </summary>
+    Task<PagedResult<PurchaseHistoryItemDto>> GetPurchaseHistoryAsync(
+        Guid userId,
+        PurchaseHistoryKind? kind,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
 }
-

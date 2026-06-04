@@ -12,6 +12,11 @@ public record AdminStoreItemDto(
     int? CoinPrice,
     long? RealMoneyPriceVnd,
     bool IsActive,
+    StoreItemStatus Status,
+    Guid? CreatorId,
+    string? CreatorUsername,
+    string? RejectionNote,
+    DateTime? ReviewedAt,
     DateTime CreatedAt,
     DateTime? UpdatedAt);
 
@@ -34,3 +39,10 @@ public record UpdateStoreItemRequestDto(
     int? CoinPrice,
     long? RealMoneyPriceVnd,
     bool IsActive);
+
+public record ApproveThemeRequestDto(
+    int? CoinPrice,
+    long? RealMoneyPriceVnd,
+    bool IsPremium = false);
+
+public record RejectThemeRequestDto(string RejectionNote);

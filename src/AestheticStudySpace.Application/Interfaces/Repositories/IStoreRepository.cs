@@ -31,5 +31,13 @@ public interface IStoreRepository
     Task<IReadOnlyList<StoreItem>> GetAllItemsAsync(StoreCategory? category, bool includeInactive, int page, int pageSize, CancellationToken cancellationToken = default);
     Task AddStoreItemAsync(StoreItem item, CancellationToken cancellationToken = default);
     Task UpdateStoreItemAsync(StoreItem item, CancellationToken cancellationToken = default);
-}
 
+    // ── User theme submission ──────────────────────────────────────────────────
+    Task<int> CountUserSubmissionsAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetUserSubmissionsAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<StoreItem?> GetUserSubmissionByIdAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default);
+
+    // ── Admin pending review ───────────────────────────────────────────────────
+    Task<int> CountPendingReviewAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetPendingReviewAsync(int page, int pageSize, CancellationToken cancellationToken = default);
+}

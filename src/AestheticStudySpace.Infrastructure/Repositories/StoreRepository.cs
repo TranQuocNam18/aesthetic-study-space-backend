@@ -12,6 +12,8 @@ public class StoreRepository : IStoreRepository
 
     public StoreRepository(AppDbContext context) => _context = context;
 
+    // ── Store catalog ──────────────────────────────────────────────────────────
+
     public async Task<int> CountActiveItemsAsync(StoreCategory? category, StoreCatalogScope scope, CancellationToken cancellationToken = default) =>
         await ApplyCatalogFilter(_context.StoreItems.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted), category, scope)
             .CountAsync(cancellationToken);
@@ -37,7 +39,31 @@ public class StoreRepository : IStoreRepository
         _context.StoreItems.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.IsActive && !x.IsDeleted, cancellationToken);
 
     public Task<StoreItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        _context.StoreItems.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        _context.StoreItems
+            .Include(x => x.Creator)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    private static IQueryable<StoreItem> ApplyCatalogFilter(
+        IQueryable<StoreItem> query,
+        StoreCategory? category,
+        StoreCatalogScope scope)
+    {
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+        else
+        {
+            query = scope switch
+            {
+                StoreCatalogScope.ThemesOnly => query.Where(x => x.Category == StoreCategory.Theme),
+                StoreCatalogScope.AssetsOnly => query.Where(x => x.Category != StoreCategory.Theme),
+                _ => query
+            };
+        }
+
+        return query;
+    }
+
+    // ── Inventory ─────────────────────────────────────────────────────────────
 
     public async Task<HashSet<Guid>> GetOwnedStoreItemIdsAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -71,25 +97,7 @@ public class StoreRepository : IStoreRepository
             .ToListAsync(cancellationToken);
     }
 
-    private static IQueryable<StoreItem> ApplyCatalogFilter(
-        IQueryable<StoreItem> query,
-        StoreCategory? category,
-        StoreCatalogScope scope)
-    {
-        if (category is not null)
-            query = query.Where(x => x.Category == category);
-        else
-        {
-            query = scope switch
-            {
-                StoreCatalogScope.ThemesOnly => query.Where(x => x.Category == StoreCategory.Theme),
-                StoreCatalogScope.AssetsOnly => query.Where(x => x.Category != StoreCategory.Theme),
-                _ => query
-            };
-        }
-
-        return query;
-    }
+    // ── Purchase / history ─────────────────────────────────────────────────────
 
     public async Task AddPurchaseAsync(Purchase purchase, CancellationToken cancellationToken = default) =>
         await _context.Purchases.AddAsync(purchase, cancellationToken);
@@ -172,6 +180,8 @@ public class StoreRepository : IStoreRepository
             .ToListAsync(cancellationToken);
     }
 
+    // ── Admin store management ─────────────────────────────────────────────────
+
     public Task<int> CountAllItemsAsync(StoreCategory? category, bool includeInactive, CancellationToken cancellationToken = default)
     {
         var query = _context.StoreItems.AsNoTracking().AsQueryable();
@@ -192,7 +202,10 @@ public class StoreRepository : IStoreRepository
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
 
-        var query = _context.StoreItems.AsNoTracking().AsQueryable();
+        var query = _context.StoreItems.AsNoTracking()
+            .Include(x => x.Creator)
+            .AsQueryable();
+
         if (!includeInactive)
             query = query.Where(x => x.IsActive);
         if (category is not null)
@@ -213,5 +226,57 @@ public class StoreRepository : IStoreRepository
         _context.StoreItems.Update(item);
         return Task.CompletedTask;
     }
-}
 
+    // ── User theme submission ──────────────────────────────────────────────────
+
+    public Task<int> CountUserSubmissionsAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _context.StoreItems.AsNoTracking()
+            .CountAsync(x => x.CreatorId == userId && !x.IsDeleted, cancellationToken);
+
+    public async Task<IReadOnlyList<StoreItem>> GetUserSubmissionsAsync(
+        Guid userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 50 ? 20 : pageSize;
+
+        return await _context.StoreItems
+            .AsNoTracking()
+            .Where(x => x.CreatorId == userId && !x.IsDeleted)
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<StoreItem?> GetUserSubmissionByIdAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default) =>
+        _context.StoreItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == itemId && x.CreatorId == userId && !x.IsDeleted, cancellationToken);
+
+    // ── Admin pending review ───────────────────────────────────────────────────
+
+    public Task<int> CountPendingReviewAsync(CancellationToken cancellationToken = default) =>
+        _context.StoreItems.AsNoTracking()
+            .CountAsync(x => x.Status == StoreItemStatus.PendingReview && !x.IsDeleted, cancellationToken);
+
+    public async Task<IReadOnlyList<StoreItem>> GetPendingReviewAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
+        return await _context.StoreItems
+            .AsNoTracking()
+            .Include(x => x.Creator)
+            .Where(x => x.Status == StoreItemStatus.PendingReview && !x.IsDeleted)
+            .OrderBy(x => x.CreatedAt) // oldest first — FIFO review queue
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+}
