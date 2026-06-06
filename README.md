@@ -67,7 +67,7 @@ Edit `src/AestheticStudySpace.Api/appsettings.json`:
   "Provider": "SqlServer"
 },
 "Jwt": {
-  "Secret": "your-local-secret-at-least-32-characters-long",
+  "Secret": "...",
   "Issuer": "AestheticStudySpace",
   "Audience": "AestheticStudySpace.Client",
   "AccessTokenMinutes": 60
@@ -199,23 +199,6 @@ Endpoints:
 
 - `POST /api/payment/vnpay/create`
 - `GET /api/payment/vnpay/callback`
-
----
-
-## SePay setup
-
-Set:
-
-- `SePay__WebhookSecret`
-
-Webhook header:
-
-- `X-SePay-Signature`: hex HMAC-SHA256(secret, rawBody)
-
-Endpoints:
-
-- `POST /api/payment/sepay/create`
-- `POST /api/payment/sepay/webhook`
 
 ---
 
