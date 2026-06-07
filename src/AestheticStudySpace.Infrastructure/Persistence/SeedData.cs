@@ -134,7 +134,7 @@ public static class SeedData
             Name = "Sleeping Cat",
             Description = "Animated cat visual layer",
             Url = "https://res.cloudinary.com/demo/image/upload/cat-sleeping.gif",
-            AssetType = AssetType.Visual,
+            AssetType = AssetType.Sticker,
             Category = AssetCategory.Pet,
             DefaultVolume = 0,
             IsPremium = false
