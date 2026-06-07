@@ -14,12 +14,13 @@ public class StoreRepository : IStoreRepository
 
     // ── Store catalog ──────────────────────────────────────────────────────────
 
-    public async Task<int> CountActiveItemsAsync(StoreCategory? category, StoreCatalogScope scope, CancellationToken cancellationToken = default) =>
-        await ApplyCatalogFilter(_context.StoreItems.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted), category, scope)
+    public async Task<int> CountActiveItemsAsync(StoreCategory? category, StoreThemeSource? themeSource, StoreCatalogScope scope, CancellationToken cancellationToken = default) =>
+        await ApplyCatalogFilter(_context.StoreItems.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted), category, themeSource, scope)
             .CountAsync(cancellationToken);
 
     public async Task<IReadOnlyList<StoreItem>> GetActiveItemsAsync(
         StoreCategory? category,
+        StoreThemeSource? themeSource,
         StoreCatalogScope scope,
         int page,
         int pageSize,
@@ -28,7 +29,7 @@ public class StoreRepository : IStoreRepository
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 50 ? 20 : pageSize;
 
-        return await ApplyCatalogFilter(_context.StoreItems.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted), category, scope)
+        return await ApplyCatalogFilter(_context.StoreItems.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted), category, themeSource, scope)
             .OrderBy(x => x.Name)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -46,15 +47,22 @@ public class StoreRepository : IStoreRepository
     private static IQueryable<StoreItem> ApplyCatalogFilter(
         IQueryable<StoreItem> query,
         StoreCategory? category,
+        StoreThemeSource? themeSource,
         StoreCatalogScope scope)
     {
         if (category is not null)
+        {
             query = query.Where(x => x.Category == category);
+            if (category == StoreCategory.Theme && themeSource is not null)
+                query = query.Where(x => x.ThemeSource == themeSource);
+        }
         else
         {
             query = scope switch
             {
-                StoreCatalogScope.ThemesOnly => query.Where(x => x.Category == StoreCategory.Theme),
+                StoreCatalogScope.ThemesOnly => themeSource is null
+                    ? query.Where(x => x.Category == StoreCategory.Theme)
+                    : query.Where(x => x.Category == StoreCategory.Theme && x.ThemeSource == themeSource),
                 StoreCatalogScope.AssetsOnly => query.Where(x => x.Category != StoreCategory.Theme),
                 _ => query
             };
@@ -182,18 +190,23 @@ public class StoreRepository : IStoreRepository
 
     // ── Admin store management ─────────────────────────────────────────────────
 
-    public Task<int> CountAllItemsAsync(StoreCategory? category, bool includeInactive, CancellationToken cancellationToken = default)
+    public Task<int> CountAllItemsAsync(StoreCategory? category, StoreThemeSource? themeSource, bool includeInactive, CancellationToken cancellationToken = default)
     {
         var query = _context.StoreItems.AsNoTracking().AsQueryable();
         if (!includeInactive)
             query = query.Where(x => x.IsActive);
         if (category is not null)
+        {
             query = query.Where(x => x.Category == category);
+            if (category == StoreCategory.Theme && themeSource is not null)
+                query = query.Where(x => x.ThemeSource == themeSource);
+        }
         return query.CountAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<StoreItem>> GetAllItemsAsync(
         StoreCategory? category,
+        StoreThemeSource? themeSource,
         bool includeInactive,
         int page,
         int pageSize,
@@ -209,7 +222,11 @@ public class StoreRepository : IStoreRepository
         if (!includeInactive)
             query = query.Where(x => x.IsActive);
         if (category is not null)
+        {
             query = query.Where(x => x.Category == category);
+            if (category == StoreCategory.Theme && themeSource is not null)
+                query = query.Where(x => x.ThemeSource == themeSource);
+        }
 
         return await query
             .OrderByDescending(x => x.CreatedAt)

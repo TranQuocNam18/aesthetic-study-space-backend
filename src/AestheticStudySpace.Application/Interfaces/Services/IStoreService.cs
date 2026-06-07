@@ -9,6 +9,7 @@ public interface IStoreService
 {
     Task<PagedResult<StoreItemDto>> GetCatalogAsync(
         StoreCategory? category,
+        StoreThemeSource? themeSource,
         StoreCatalogScope scope,
         Guid? viewerUserId,
         int page,

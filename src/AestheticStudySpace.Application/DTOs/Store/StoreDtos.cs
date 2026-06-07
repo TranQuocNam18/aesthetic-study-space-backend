@@ -5,9 +5,14 @@ namespace AestheticStudySpace.Application.DTOs.Store;
 public record StoreItemDto(
     Guid Id,
     StoreCategory Category,
+    StoreThemeSource? ThemeSource,
     string Name,
     string? Description,
     string AssetUrl,
+    Guid? ThemeStickerItemId,
+    Guid? ThemeBackgroundItemId,
+    Guid? ThemeEffectItemId,
+    Guid? ThemeAmbientSoundItemId,
     bool IsPremium,
     int? CoinPrice,
     long? RealMoneyPriceVnd,
@@ -20,9 +25,14 @@ public record UserInventoryItemDto(
     Guid InventoryId,
     Guid StoreItemId,
     StoreCategory Category,
+    StoreThemeSource? ThemeSource,
     string Name,
     string? Description,
     string AssetUrl,
+    Guid? ThemeStickerItemId,
+    Guid? ThemeBackgroundItemId,
+    Guid? ThemeEffectItemId,
+    Guid? ThemeAmbientSoundItemId,
     bool IsPremium,
     DateTime AcquiredAt);
 
@@ -52,6 +62,11 @@ public record PurchaseHistoryItemDto(
     string? TransactionCode,
     Guid? StoreItemId,
     StoreCategory? StoreCategory,
+    StoreThemeSource? ThemeSource,
     string? StoreItemAssetUrl,
+    Guid? ThemeStickerItemId,
+    Guid? ThemeBackgroundItemId,
+    Guid? ThemeEffectItemId,
+    Guid? ThemeAmbientSoundItemId,
     DateTime PurchasedAt);
 

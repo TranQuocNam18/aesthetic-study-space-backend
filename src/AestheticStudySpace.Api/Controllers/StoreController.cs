@@ -30,29 +30,32 @@ public class StoreController : ControllerBase
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<PagedResult<StoreItemDto>>>> GetCatalog(
         [FromQuery] StoreCategory? category,
+        [FromQuery] StoreThemeSource? themeSource,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default) =>
-        GetItemsInternal(category, StoreCatalogScope.All, page, pageSize, cancellationToken);
+        GetItemsInternal(category, themeSource, StoreCatalogScope.All, page, pageSize, cancellationToken);
 
     /// <summary>Browse all items (alias for /catalog, backward-compatible).</summary>
     [HttpGet]
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<PagedResult<StoreItemDto>>>> GetCatalogRoot(
         [FromQuery] StoreCategory? category,
+        [FromQuery] StoreThemeSource? themeSource,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default) =>
-        GetItemsInternal(category, StoreCatalogScope.All, page, pageSize, cancellationToken);
+        GetItemsInternal(category, themeSource, StoreCatalogScope.All, page, pageSize, cancellationToken);
 
     /// <summary>Browse themes only (room background themes).</summary>
     [HttpGet("themes")]
     [AllowAnonymous]
     public Task<ActionResult<ApiResponse<PagedResult<StoreItemDto>>>> GetThemes(
+        [FromQuery] StoreThemeSource? themeSource,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default) =>
-        GetItemsInternal(StoreCategory.Theme, StoreCatalogScope.ThemesOnly, page, pageSize, cancellationToken);
+        GetItemsInternal(StoreCategory.Theme, themeSource, StoreCatalogScope.ThemesOnly, page, pageSize, cancellationToken);
 
     /// <summary>Browse assets only (backgrounds, stickers, effects, ambient sounds).</summary>
     [HttpGet("assets")]
@@ -62,7 +65,7 @@ public class StoreController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default) =>
-        GetItemsInternal(category, StoreCatalogScope.AssetsOnly, page, pageSize, cancellationToken);
+        GetItemsInternal(category, null, StoreCatalogScope.AssetsOnly, page, pageSize, cancellationToken);
 
     /// <summary>Get a single store item by ID.</summary>
     [HttpGet("items/{id:guid}")]
@@ -149,12 +152,13 @@ public class StoreController : ControllerBase
 
     private async Task<ActionResult<ApiResponse<PagedResult<StoreItemDto>>>> GetItemsInternal(
         StoreCategory? category,
+        StoreThemeSource? themeSource,
         StoreCatalogScope scope,
         int page,
         int pageSize,
         CancellationToken cancellationToken)
     {
-        var catalog = await _storeService.GetCatalogAsync(category, scope, TryGetViewerUserId(), page, pageSize, cancellationToken);
+        var catalog = await _storeService.GetCatalogAsync(category, themeSource, scope, TryGetViewerUserId(), page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResult<StoreItemDto>>.Ok(catalog));
     }
 }

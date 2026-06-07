@@ -22,6 +22,7 @@ public class AdminStoreService : IAdminStoreService
 
     public async Task<PagedResult<AdminStoreItemDto>> GetItemsAsync(
         StoreCategory? category,
+        StoreThemeSource? themeSource,
         bool includeInactive,
         int page,
         int pageSize,
@@ -30,8 +31,8 @@ public class AdminStoreService : IAdminStoreService
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        var total = await _storeRepository.CountAllItemsAsync(category, includeInactive, cancellationToken);
-        var items = await _storeRepository.GetAllItemsAsync(category, includeInactive, page, pageSize, cancellationToken);
+        var total = await _storeRepository.CountAllItemsAsync(category, themeSource, includeInactive, cancellationToken);
+        var items = await _storeRepository.GetAllItemsAsync(category, themeSource, includeInactive, page, pageSize, cancellationToken);
 
         return new PagedResult<AdminStoreItemDto>
         {
@@ -56,14 +57,21 @@ public class AdminStoreService : IAdminStoreService
         var item = new StoreItem
         {
             Category = request.Category,
+            ThemeSource = request.Category == StoreCategory.Theme ? request.ThemeSource ?? StoreThemeSource.Official : null,
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
+            ThemeStickerItemId = request.ThemeStickerItemId,
+            ThemeBackgroundItemId = request.ThemeBackgroundItemId,
+            ThemeEffectItemId = request.ThemeEffectItemId,
+            ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId,
             IsPremium = request.IsPremium,
             CoinPrice = NormalizeCoinPrice(request.CoinPrice),
             RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd),
             IsActive = request.IsActive
         };
+
+        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
 
         await _storeRepository.AddStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -78,14 +86,21 @@ public class AdminStoreService : IAdminStoreService
         ValidateRequest(request.Name, request.AssetUrl, request.CoinPrice, request.RealMoneyPriceVnd);
 
         item.Category = request.Category;
+        item.ThemeSource = request.Category == StoreCategory.Theme ? request.ThemeSource ?? StoreThemeSource.Official : null;
         item.Name = request.Name.Trim();
         item.Description = request.Description?.Trim();
         item.AssetUrl = request.AssetUrl.Trim();
+        item.ThemeStickerItemId = request.ThemeStickerItemId;
+        item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
+        item.ThemeEffectItemId = request.ThemeEffectItemId;
+        item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
         item.IsPremium = request.IsPremium;
         item.CoinPrice = NormalizeCoinPrice(request.CoinPrice);
         item.RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd);
         item.IsActive = request.IsActive;
         item.UpdatedAt = DateTime.UtcNow;
+
+        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -161,6 +176,7 @@ public class AdminStoreService : IAdminStoreService
 
         item.Status = Domain.Enums.StoreItemStatus.Approved;
         item.IsActive = true;
+        item.ThemeSource = StoreThemeSource.Community;
         item.RejectionNote = null;
         item.ReviewedAt = DateTime.UtcNow;
         item.UpdatedAt = DateTime.UtcNow;
@@ -204,9 +220,25 @@ public class AdminStoreService : IAdminStoreService
     }
 
     private static AdminStoreItemDto ToAdminDto(StoreItem x) =>
-        new(x.Id, x.Category, x.Name, x.Description, x.AssetUrl, x.IsPremium,
+        new(x.Id, x.Category, x.ThemeSource, x.Name, x.Description, x.AssetUrl,
+            x.ThemeStickerItemId, x.ThemeBackgroundItemId, x.ThemeEffectItemId, x.ThemeAmbientSoundItemId,
+            x.IsPremium,
             x.CoinPrice, x.RealMoneyPriceVnd, x.IsActive,
             x.Status, x.CreatorId, x.Creator?.Username,
             x.RejectionNote, x.ReviewedAt,
             x.CreatedAt, x.UpdatedAt);
+
+    private static void ValidateThemeComponents(
+        StoreCategory category,
+        Guid? stickerItemId,
+        Guid? backgroundItemId,
+        Guid? effectItemId,
+        Guid? ambientSoundItemId)
+    {
+        if (category != StoreCategory.Theme)
+            return;
+
+        if (stickerItemId is null || backgroundItemId is null || effectItemId is null || ambientSoundItemId is null)
+            throw new ValidationException("Theme items must include sticker, background, effect, and ambient sound components.");
+    }
 }

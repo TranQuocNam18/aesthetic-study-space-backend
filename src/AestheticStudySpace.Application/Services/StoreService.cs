@@ -26,6 +26,7 @@ public class StoreService : IStoreService
 
     public async Task<PagedResult<StoreItemDto>> GetCatalogAsync(
         StoreCategory? category,
+        StoreThemeSource? themeSource,
         StoreCatalogScope scope,
         Guid? viewerUserId,
         int page,
@@ -39,8 +40,8 @@ public class StoreService : IStoreService
             ? null
             : await _storeRepository.GetOwnedStoreItemIdsAsync(viewerUserId.Value, cancellationToken);
 
-        var total = await _storeRepository.CountActiveItemsAsync(category, scope, cancellationToken);
-        var items = await _storeRepository.GetActiveItemsAsync(category, scope, page, pageSize, cancellationToken);
+        var total = await _storeRepository.CountActiveItemsAsync(category, themeSource, scope, cancellationToken);
+        var items = await _storeRepository.GetActiveItemsAsync(category, themeSource, scope, page, pageSize, cancellationToken);
 
         return new PagedResult<StoreItemDto>
         {
@@ -201,9 +202,14 @@ public class StoreService : IStoreService
             row.Id,
             item.Id,
             item.Category,
+            item.ThemeSource,
             item.Name,
             item.Description,
             item.AssetUrl,
+            item.ThemeStickerItemId,
+            item.ThemeBackgroundItemId,
+            item.ThemeEffectItemId,
+            item.ThemeAmbientSoundItemId,
             item.IsPremium,
             row.AcquiredAt);
     }
@@ -227,7 +233,12 @@ public class StoreService : IStoreService
                 payment?.TransactionCode,
                 item.Id,
                 item.Category,
+                item.ThemeSource,
                 item.AssetUrl,
+                item.ThemeStickerItemId,
+                item.ThemeBackgroundItemId,
+                item.ThemeEffectItemId,
+                item.ThemeAmbientSoundItemId,
                 purchase.CreatedAt);
         }
 
@@ -246,6 +257,11 @@ public class StoreService : IStoreService
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 purchase.CreatedAt);
         }
 
@@ -259,6 +275,11 @@ public class StoreService : IStoreService
             purchase.Currency,
             payment?.Provider,
             payment?.TransactionCode,
+            null,
+            null,
+            null,
+            null,
+            null,
             null,
             null,
             null,
@@ -279,15 +300,25 @@ public class StoreService : IStoreService
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
             payment.SucceededAt ?? payment.CreatedAt);
 
     private static StoreItemDto ToDto(StoreItem x, HashSet<Guid>? ownedIds) =>
         new(
             x.Id,
             x.Category,
+            x.ThemeSource,
             x.Name,
             x.Description,
             x.AssetUrl,
+            x.ThemeStickerItemId,
+            x.ThemeBackgroundItemId,
+            x.ThemeEffectItemId,
+            x.ThemeAmbientSoundItemId,
             x.IsPremium,
             x.CoinPrice,
             x.RealMoneyPriceVnd,

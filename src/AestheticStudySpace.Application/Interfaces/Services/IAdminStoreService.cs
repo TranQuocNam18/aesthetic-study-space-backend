@@ -6,7 +6,7 @@ namespace AestheticStudySpace.Application.Interfaces.Services;
 
 public interface IAdminStoreService
 {
-    Task<PagedResult<AdminStoreItemDto>> GetItemsAsync(StoreCategory? category, bool includeInactive, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<PagedResult<AdminStoreItemDto>> GetItemsAsync(StoreCategory? category, StoreThemeSource? themeSource, bool includeInactive, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<AdminStoreItemDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<AdminStoreItemDto> CreateAsync(CreateStoreItemRequestDto request, CancellationToken cancellationToken = default);
     Task<AdminStoreItemDto> UpdateAsync(Guid id, UpdateStoreItemRequestDto request, CancellationToken cancellationToken = default);

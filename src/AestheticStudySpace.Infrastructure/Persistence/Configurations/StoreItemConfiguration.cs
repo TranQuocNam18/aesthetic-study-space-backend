@@ -12,6 +12,7 @@ public class StoreItemConfiguration : IEntityTypeConfiguration<StoreItem>
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Category).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.ThemeSource).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Name).HasMaxLength(120).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.Property(x => x.AssetUrl).HasMaxLength(2048).IsRequired();
@@ -29,6 +30,7 @@ public class StoreItemConfiguration : IEntityTypeConfiguration<StoreItem>
             .IsRequired(false);
 
         builder.HasIndex(x => x.Category);
+        builder.HasIndex(x => x.ThemeSource);
         builder.HasIndex(x => x.IsActive);
         builder.HasIndex(x => x.IsPremium);
         builder.HasIndex(x => x.Status);

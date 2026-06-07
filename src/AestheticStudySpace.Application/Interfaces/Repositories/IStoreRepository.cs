@@ -12,8 +12,8 @@ public enum StoreCatalogScope
 
 public interface IStoreRepository
 {
-    Task<int> CountActiveItemsAsync(StoreCategory? category, StoreCatalogScope scope, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<StoreItem>> GetActiveItemsAsync(StoreCategory? category, StoreCatalogScope scope, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<int> CountActiveItemsAsync(StoreCategory? category, StoreThemeSource? themeSource, StoreCatalogScope scope, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetActiveItemsAsync(StoreCategory? category, StoreThemeSource? themeSource, StoreCatalogScope scope, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<StoreItem?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<StoreItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<HashSet<Guid>> GetOwnedStoreItemIdsAsync(Guid userId, CancellationToken cancellationToken = default);
@@ -27,8 +27,8 @@ public interface IStoreRepository
     Task<IReadOnlyList<Purchase>> GetPurchaseHistoryPurchasesAsync(Guid userId, IReadOnlyList<Guid> purchaseIds, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PaymentTransaction>> GetPurchaseHistorySubscriptionPaymentsAsync(Guid userId, IReadOnlyList<Guid> paymentIds, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<(Guid Id, DateTime CreatedAt, bool IsPurchase)>> GetPurchaseHistoryIndexAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<int> CountAllItemsAsync(StoreCategory? category, bool includeInactive, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<StoreItem>> GetAllItemsAsync(StoreCategory? category, bool includeInactive, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<int> CountAllItemsAsync(StoreCategory? category, StoreThemeSource? themeSource, bool includeInactive, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetAllItemsAsync(StoreCategory? category, StoreThemeSource? themeSource, bool includeInactive, int page, int pageSize, CancellationToken cancellationToken = default);
     Task AddStoreItemAsync(StoreItem item, CancellationToken cancellationToken = default);
     Task UpdateStoreItemAsync(StoreItem item, CancellationToken cancellationToken = default);
 

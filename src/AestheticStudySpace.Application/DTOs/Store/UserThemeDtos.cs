@@ -8,6 +8,10 @@ public record SubmitThemeRequestDto(
     string? Description,
     /// <summary>Cloudinary URL of the theme asset (already uploaded by client).</summary>
     string AssetUrl,
+    Guid? ThemeStickerItemId,
+    Guid? ThemeBackgroundItemId,
+    Guid? ThemeEffectItemId,
+    Guid? ThemeAmbientSoundItemId,
     int? CoinPrice,
     long? RealMoneyPriceVnd);
 
@@ -17,8 +21,13 @@ public record UserThemeSubmissionDto(
     string Name,
     string? Description,
     string AssetUrl,
+    Guid? ThemeStickerItemId,
+    Guid? ThemeBackgroundItemId,
+    Guid? ThemeEffectItemId,
+    Guid? ThemeAmbientSoundItemId,
     int? CoinPrice,
     long? RealMoneyPriceVnd,
+    StoreThemeSource ThemeSource,
     StoreItemStatus Status,
     string? RejectionNote,
     DateTime SubmittedAt,

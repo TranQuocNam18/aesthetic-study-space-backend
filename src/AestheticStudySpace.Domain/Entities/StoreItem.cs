@@ -5,11 +5,16 @@ namespace AestheticStudySpace.Domain.Entities;
 public class StoreItem : BaseEntity
 {
     public StoreCategory Category { get; set; }
+    public StoreThemeSource? ThemeSource { get; set; }
 
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
 
     public string AssetUrl { get; set; } = string.Empty;
+    public Guid? ThemeStickerItemId { get; set; }
+    public Guid? ThemeBackgroundItemId { get; set; }
+    public Guid? ThemeEffectItemId { get; set; }
+    public Guid? ThemeAmbientSoundItemId { get; set; }
     public bool IsPremium { get; set; }
 
     public int? CoinPrice { get; set; }

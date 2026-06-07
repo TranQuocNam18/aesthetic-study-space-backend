@@ -22,12 +22,13 @@ public class AdminStoreItemsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetAll(
         [FromQuery] StoreCategory? category,
+        [FromQuery] StoreThemeSource? themeSource,
         [FromQuery] bool includeInactive = true,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _adminStoreService.GetItemsAsync(category, includeInactive, page, pageSize, cancellationToken);
+        var result = await _adminStoreService.GetItemsAsync(category, themeSource, includeInactive, page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResult<AdminStoreItemDto>>.Ok(result));
     }
 

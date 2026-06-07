@@ -49,9 +49,14 @@ public class UserThemeService : IUserThemeService
         var item = new StoreItem
         {
             Category = StoreCategory.Theme,
+            ThemeSource = StoreThemeSource.Community,
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
+            ThemeStickerItemId = request.ThemeStickerItemId,
+            ThemeBackgroundItemId = request.ThemeBackgroundItemId,
+            ThemeEffectItemId = request.ThemeEffectItemId,
+            ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId,
             IsPremium = false,
             CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null,
             RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null,
@@ -59,6 +64,8 @@ public class UserThemeService : IUserThemeService
             CreatorId = userId,
             Status = StoreItemStatus.PendingReview
         };
+
+        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
 
         await _storeRepository.AddStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -118,7 +125,19 @@ public class UserThemeService : IUserThemeService
 
     private static UserThemeSubmissionDto ToDto(StoreItem x) =>
         new(x.Id, x.Name, x.Description, x.AssetUrl,
+            x.ThemeStickerItemId, x.ThemeBackgroundItemId, x.ThemeEffectItemId, x.ThemeAmbientSoundItemId,
             x.CoinPrice, x.RealMoneyPriceVnd,
+            x.ThemeSource ?? StoreThemeSource.Community,
             x.Status, x.RejectionNote,
             x.CreatedAt, x.ReviewedAt);
+
+    private static void ValidateThemeComponents(
+        Guid? stickerItemId,
+        Guid? backgroundItemId,
+        Guid? effectItemId,
+        Guid? ambientSoundItemId)
+    {
+        if (stickerItemId is null || backgroundItemId is null || effectItemId is null || ambientSoundItemId is null)
+            throw new ValidationException("Theme submissions must include sticker, background, effect, and ambient sound components.");
+    }
 }

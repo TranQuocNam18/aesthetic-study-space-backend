@@ -23,6 +23,9 @@ public static class SeedData
     public static readonly Guid StoreThemeStarterId = Guid.Parse("44444444-4444-4444-4444-444444444401");
     public static readonly Guid StoreBackgroundRainId = Guid.Parse("44444444-4444-4444-4444-444444444402");
     public static readonly Guid StoreStickerCatId = Guid.Parse("44444444-4444-4444-4444-444444444403");
+    public static readonly Guid StoreEffectGlowId = Guid.Parse("44444444-4444-4444-4444-444444444404");
+    public static readonly Guid StoreAmbientRainId = Guid.Parse("44444444-4444-4444-4444-444444444405");
+    public static readonly Guid StoreBackgroundSunsetId = Guid.Parse("44444444-4444-4444-4444-444444444406");
     public static readonly Guid MissionDailyLoginId = Guid.Parse("55555555-5555-5555-5555-555555555501");
     public static readonly Guid MissionPomodoroId = Guid.Parse("55555555-5555-5555-5555-555555555502");
     public static readonly Guid MissionWeeklyStudyId = Guid.Parse("55555555-5555-5555-5555-555555555503");
@@ -174,9 +177,14 @@ public static class SeedData
                 {
                     Id = StoreThemeStarterId,
                     Category = StoreCategory.Theme,
+                    ThemeSource = StoreThemeSource.Official,
                     Name = "Cozy Starter Theme",
-                    Description = "Free warm theme for new users.",
+                    Description = "Free warm theme combo with sticker, background, effect, and ambient sound.",
                     AssetUrl = "https://res.cloudinary.com/demo/image/upload/theme-cozy.jpg",
+                    ThemeStickerItemId = StoreStickerCatId,
+                    ThemeBackgroundItemId = StoreBackgroundRainId,
+                    ThemeEffectItemId = StoreEffectGlowId,
+                    ThemeAmbientSoundItemId = StoreAmbientRainId,
                     IsPremium = false,
                     CoinPrice = null,
                     RealMoneyPriceVnd = null,
@@ -186,6 +194,7 @@ public static class SeedData
                 {
                     Id = StoreBackgroundRainId,
                     Category = StoreCategory.Background,
+                    ThemeSource = null,
                     Name = "Rainy Window",
                     Description = "Calm rain background.",
                     AssetUrl = "https://res.cloudinary.com/demo/image/upload/bg-rain.jpg",
@@ -196,14 +205,54 @@ public static class SeedData
                 },
                 new StoreItem
                 {
+                    Id = StoreBackgroundSunsetId,
+                    Category = StoreCategory.Background,
+                    ThemeSource = null,
+                    Name = "Sunset Horizon",
+                    Description = "Golden hour background for calm evening sessions.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/bg-sunset.jpg",
+                    IsPremium = true,
+                    CoinPrice = 220,
+                    RealMoneyPriceVnd = 39000,
+                    IsActive = true
+                },
+                new StoreItem
+                {
                     Id = StoreStickerCatId,
                     Category = StoreCategory.Sticker,
+                    ThemeSource = null,
                     Name = "Premium Cat Sticker",
                     Description = "Animated cat sticker — Premium users only.",
                     AssetUrl = "https://res.cloudinary.com/demo/image/upload/sticker-cat.gif",
                     IsPremium = true,
                     CoinPrice = 300,
                     RealMoneyPriceVnd = 29000,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreEffectGlowId,
+                    Category = StoreCategory.Effect,
+                    ThemeSource = null,
+                    Name = "Soft Glow",
+                    Description = "A subtle glow effect for theme combos.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/effect-glow.png",
+                    IsPremium = false,
+                    CoinPrice = 120,
+                    RealMoneyPriceVnd = null,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreAmbientRainId,
+                    Category = StoreCategory.AmbientSound,
+                    ThemeSource = null,
+                    Name = "Gentle Rain Loop",
+                    Description = "Ambient rain sound for theme combos.",
+                    AssetUrl = "https://res.cloudinary.com/demo/audio/upload/ambient-rain.mp3",
+                    IsPremium = false,
+                    CoinPrice = 140,
+                    RealMoneyPriceVnd = null,
                     IsActive = true
                 });
         }
