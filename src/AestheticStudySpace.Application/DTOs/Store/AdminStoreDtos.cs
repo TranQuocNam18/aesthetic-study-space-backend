@@ -2,7 +2,7 @@ using AestheticStudySpace.Domain.Enums;
 
 namespace AestheticStudySpace.Application.DTOs.Store;
 
-public record StoreItemDto(
+public record AdminStoreItemDto(
     Guid Id,
     StoreCategory Category,
     StoreThemeSource? ThemeSource,
@@ -17,13 +17,15 @@ public record StoreItemDto(
     int? CoinPrice,
     long? RealMoneyPriceVnd,
     bool IsActive,
-    bool? IsOwned = null,
-    bool CanBuyWithCoins = false,
-    bool CanBuyWithMoney = false);
+    StoreItemStatus Status,
+    Guid? CreatorId,
+    string? CreatorUsername,
+    string? RejectionNote,
+    DateTime? ReviewedAt,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt);
 
-public record UserInventoryItemDto(
-    Guid InventoryId,
-    Guid StoreItemId,
+public record CreateStoreItemRequestDto(
     StoreCategory Category,
     StoreThemeSource? ThemeSource,
     string Name,
@@ -34,39 +36,28 @@ public record UserInventoryItemDto(
     Guid? ThemeEffectItemId,
     Guid? ThemeAmbientSoundItemId,
     bool IsPremium,
-    DateTime AcquiredAt);
+    int? CoinPrice,
+    long? RealMoneyPriceVnd,
+    bool IsActive = true);
 
-public record StorePurchaseResultDto(
-    bool Purchased,
-    Guid StoreItemId,
-    int RemainingCoins);
-
-public record BuyWithCoinsRequestDto(Guid StoreItemId);
-
-public enum PurchaseHistoryKind
-{
-    StoreItem = 0,
-    CoinPack = 1,
-    Subscription = 2
-}
-
-public record PurchaseHistoryItemDto(
-    Guid Id,
-    PurchaseHistoryKind Kind,
-    string Title,
-    string? Description,
-    int? CoinsSpent,
-    long? AmountVnd,
-    string Currency,
-    PaymentProvider? PaymentProvider,
-    string? TransactionCode,
-    Guid? StoreItemId,
-    StoreCategory? StoreCategory,
+public record UpdateStoreItemRequestDto(
+    StoreCategory Category,
     StoreThemeSource? ThemeSource,
-    string? StoreItemAssetUrl,
+    string Name,
+    string? Description,
+    string AssetUrl,
     Guid? ThemeStickerItemId,
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,
     Guid? ThemeAmbientSoundItemId,
-    DateTime PurchasedAt);
+    bool IsPremium,
+    int? CoinPrice,
+    long? RealMoneyPriceVnd,
+    bool IsActive);
 
+public record ApproveThemeRequestDto(
+    int? CoinPrice,
+    long? RealMoneyPriceVnd,
+    bool IsPremium = false);
+
+public record RejectThemeRequestDto(string RejectionNote);

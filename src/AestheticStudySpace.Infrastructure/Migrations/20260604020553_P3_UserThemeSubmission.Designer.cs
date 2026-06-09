@@ -3,6 +3,7 @@ using System;
 using AestheticStudySpace.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AestheticStudySpace.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604020553_P3_UserThemeSubmission")]
+    partial class P3_UserThemeSubmission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -934,22 +937,6 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                         .HasColumnType("character varying(30)")
                         .HasDefaultValue("AdminCreated");
 
-                    b.Property<Guid?>("ThemeAmbientSoundItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ThemeBackgroundItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ThemeEffectItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ThemeSource")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Guid?>("ThemeStickerItemId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -967,8 +954,6 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                     b.HasIndex("IsPremium");
 
                     b.HasIndex("Status");
-
-                    b.HasIndex("ThemeSource");
 
                     b.ToTable("StoreItems", (string)null);
                 });

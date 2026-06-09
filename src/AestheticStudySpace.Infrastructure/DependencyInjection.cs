@@ -3,6 +3,7 @@ using AestheticStudySpace.Application.Interfaces;
 using AestheticStudySpace.Application.Interfaces.Repositories;
 using AestheticStudySpace.Application.Interfaces.Services;
 using AestheticStudySpace.Application.Common;
+using AestheticStudySpace.Infrastructure.BackgroundServices;
 using AestheticStudySpace.Infrastructure.Integrations;
 using AestheticStudySpace.Infrastructure.Identity;
 using AestheticStudySpace.Infrastructure.Persistence;
@@ -24,7 +25,6 @@ public static class DependencyInjection
         services.Configure<ResendSettings>(configuration.GetSection(ResendSettings.SectionName));
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
         services.Configure<VnPaySettings>(configuration.GetSection(VnPaySettings.SectionName));
-        services.Configure<SePaySettings>(configuration.GetSection(SePaySettings.SectionName));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
@@ -100,6 +100,7 @@ public static class DependencyInjection
             });
 
         services.AddAuthorization();
+        services.AddHostedService<MissionResetWorker>();
 
         return services;
     }

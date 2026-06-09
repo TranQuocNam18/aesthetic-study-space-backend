@@ -47,25 +47,5 @@ public class PaymentController : ControllerBase
         }
     }
 
-    [HttpPost("sepay/create")]
-    [Authorize]
-    public async Task<ActionResult<ApiResponse<SePayCreateResponseDto>>> CreateSePay([FromBody] CreateSePayPaymentRequestDto request, CancellationToken cancellationToken = default)
-    {
-        var userId = User.GetUserId();
-        var result = await _paymentService.CreateSePayAsync(userId, request, cancellationToken);
-        return ApiResponse<SePayCreateResponseDto>.Ok(result);
-    }
-
-    [HttpPost("sepay/webhook")]
-    [AllowAnonymous]
-    public async Task<IActionResult> SePayWebhook(CancellationToken cancellationToken = default)
-    {
-        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
-        var raw = await reader.ReadToEndAsync(cancellationToken);
-        var sig = Request.Headers["X-SePay-Signature"].ToString();
-
-        await _paymentService.HandleSePayWebhookAsync(raw, sig, cancellationToken);
-        return Ok(ApiResponse<object>.Ok(new { ok = true }));
-    }
 }
 

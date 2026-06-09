@@ -20,6 +20,15 @@ public static class SeedData
     public static readonly Guid WhiteNoiseAssetId = Guid.Parse("33333333-3333-3333-3333-333333333303");
     public static readonly Guid CatAssetId = Guid.Parse("33333333-3333-3333-3333-333333333304");
     public static readonly Guid LofiPremiumAssetId = Guid.Parse("33333333-3333-3333-3333-333333333305");
+    public static readonly Guid StoreThemeStarterId = Guid.Parse("44444444-4444-4444-4444-444444444401");
+    public static readonly Guid StoreBackgroundRainId = Guid.Parse("44444444-4444-4444-4444-444444444402");
+    public static readonly Guid StoreStickerCatId = Guid.Parse("44444444-4444-4444-4444-444444444403");
+    public static readonly Guid StoreEffectGlowId = Guid.Parse("44444444-4444-4444-4444-444444444404");
+    public static readonly Guid StoreAmbientRainId = Guid.Parse("44444444-4444-4444-4444-444444444405");
+    public static readonly Guid StoreBackgroundSunsetId = Guid.Parse("44444444-4444-4444-4444-444444444406");
+    public static readonly Guid MissionDailyLoginId = Guid.Parse("55555555-5555-5555-5555-555555555501");
+    public static readonly Guid MissionPomodoroId = Guid.Parse("55555555-5555-5555-5555-555555555502");
+    public static readonly Guid MissionWeeklyStudyId = Guid.Parse("55555555-5555-5555-5555-555555555503");
 
     public static async Task InitializeAsync(IServiceProvider serviceProvider)
     {
@@ -125,7 +134,7 @@ public static class SeedData
             Name = "Sleeping Cat",
             Description = "Animated cat visual layer",
             Url = "https://res.cloudinary.com/demo/image/upload/cat-sleeping.gif",
-            AssetType = AssetType.Visual,
+            AssetType = AssetType.Sticker,
             Category = AssetCategory.Pet,
             DefaultVolume = 0,
             IsPremium = false
@@ -161,8 +170,136 @@ public static class SeedData
         if (!await context.RoomAssetMappings.AnyAsync())
             await context.RoomAssetMappings.AddRangeAsync(mappings);
 
+        if (!await context.StoreItems.AnyAsync())
+        {
+            await context.StoreItems.AddRangeAsync(
+                new StoreItem
+                {
+                    Id = StoreThemeStarterId,
+                    Category = StoreCategory.Theme,
+                    ThemeSource = StoreThemeSource.Official,
+                    Name = "Cozy Starter Theme",
+                    Description = "Free warm theme combo with sticker, background, effect, and ambient sound.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/theme-cozy.jpg",
+                    ThemeStickerItemId = StoreStickerCatId,
+                    ThemeBackgroundItemId = StoreBackgroundRainId,
+                    ThemeEffectItemId = StoreEffectGlowId,
+                    ThemeAmbientSoundItemId = StoreAmbientRainId,
+                    IsPremium = false,
+                    CoinPrice = null,
+                    RealMoneyPriceVnd = null,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreBackgroundRainId,
+                    Category = StoreCategory.Background,
+                    ThemeSource = null,
+                    Name = "Rainy Window",
+                    Description = "Calm rain background.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/bg-rain.jpg",
+                    IsPremium = false,
+                    CoinPrice = 150,
+                    RealMoneyPriceVnd = null,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreBackgroundSunsetId,
+                    Category = StoreCategory.Background,
+                    ThemeSource = null,
+                    Name = "Sunset Horizon",
+                    Description = "Golden hour background for calm evening sessions.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/bg-sunset.jpg",
+                    IsPremium = true,
+                    CoinPrice = 220,
+                    RealMoneyPriceVnd = 39000,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreStickerCatId,
+                    Category = StoreCategory.Sticker,
+                    ThemeSource = null,
+                    Name = "Premium Cat Sticker",
+                    Description = "Animated cat sticker — Premium users only.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/sticker-cat.gif",
+                    IsPremium = true,
+                    CoinPrice = 300,
+                    RealMoneyPriceVnd = 29000,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreEffectGlowId,
+                    Category = StoreCategory.Effect,
+                    ThemeSource = null,
+                    Name = "Soft Glow",
+                    Description = "A subtle glow effect for theme combos.",
+                    AssetUrl = "https://res.cloudinary.com/demo/image/upload/effect-glow.png",
+                    IsPremium = false,
+                    CoinPrice = 120,
+                    RealMoneyPriceVnd = null,
+                    IsActive = true
+                },
+                new StoreItem
+                {
+                    Id = StoreAmbientRainId,
+                    Category = StoreCategory.AmbientSound,
+                    ThemeSource = null,
+                    Name = "Gentle Rain Loop",
+                    Description = "Ambient rain sound for theme combos.",
+                    AssetUrl = "https://res.cloudinary.com/demo/audio/upload/ambient-rain.mp3",
+                    IsPremium = false,
+                    CoinPrice = 140,
+                    RealMoneyPriceVnd = null,
+                    IsActive = true
+                });
+        }
+
+        if (!await context.Missions.AnyAsync())
+        {
+            await context.Missions.AddRangeAsync(
+                new Mission
+                {
+                    Id = MissionDailyLoginId,
+                    Code = "daily_login",
+                    Name = "Daily Login",
+                    Description = "Log in once per day.",
+                    RewardCoins = 10,
+                    TriggerKey = "daily_login",
+                    TargetValue = 1,
+                    Frequency = "daily",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionPomodoroId,
+                    Code = "pomodoro_daily",
+                    Name = "Focus Sessions",
+                    Description = "Complete 4 Pomodoro sessions today.",
+                    RewardCoins = 25,
+                    TriggerKey = "pomodoro_complete",
+                    TargetValue = 4,
+                    Frequency = "daily",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionWeeklyStudyId,
+                    Code = "weekly_study",
+                    Name = "Weekly Study Goal",
+                    Description = "Accumulate 300 minutes of study this week.",
+                    RewardCoins = 100,
+                    TriggerKey = "study_minutes",
+                    TargetValue = 300,
+                    Frequency = "weekly",
+                    IsActive = true
+                });
+        }
+
         await context.SaveChangesAsync();
 
-        logger.LogInformation("Database seeded with sample rooms, assets, and admin user.");
+        logger.LogInformation("Database seeded with sample rooms, assets, store items, missions, and admin user.");
     }
 }
