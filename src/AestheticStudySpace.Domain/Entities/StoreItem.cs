@@ -11,6 +11,11 @@ public class StoreItem : BaseEntity
     public string? Description { get; set; }
 
     public string AssetUrl { get; set; } = string.Empty;
+    /// <summary>
+    /// Optional preview URL (image or video) shown to users before purchase.
+    /// For Effect items this should be a short video clip URL.
+    /// </summary>
+    public string? PreviewUrl { get; set; }
     public Guid? ThemeStickerItemId { get; set; }
     public Guid? ThemeBackgroundItemId { get; set; }
     public Guid? ThemeEffectItemId { get; set; }

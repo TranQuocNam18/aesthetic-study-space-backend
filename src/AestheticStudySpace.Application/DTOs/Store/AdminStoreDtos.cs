@@ -9,6 +9,7 @@ public record AdminStoreItemDto(
     string Name,
     string? Description,
     string AssetUrl,
+    string? PreviewUrl,
     Guid? ThemeStickerItemId,
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,
@@ -31,13 +32,14 @@ public record CreateStoreItemRequestDto(
     string Name,
     string? Description,
     string AssetUrl,
+    string? PreviewUrl,
     Guid? ThemeStickerItemId,
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,
     Guid? ThemeAmbientSoundItemId,
-    bool IsPremium,
-    int? CoinPrice,
-    long? RealMoneyPriceVnd,
+    bool IsPremium = true,
+    int? CoinPrice = null,
+    long? RealMoneyPriceVnd = null,
     bool IsActive = true);
 
 public record UpdateStoreItemRequestDto(
@@ -46,6 +48,7 @@ public record UpdateStoreItemRequestDto(
     string Name,
     string? Description,
     string AssetUrl,
+    string? PreviewUrl,
     Guid? ThemeStickerItemId,
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,

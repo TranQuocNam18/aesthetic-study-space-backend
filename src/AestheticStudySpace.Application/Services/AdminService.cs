@@ -102,16 +102,20 @@ public class AdminService : IAdminService
         return ToDto(user);
     }
 
-    public async Task<AdminOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default)
-    {
-        return await _analyticsRepository.GetOverviewAsync(cancellationToken);
-    }
+    public Task<AdminOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default) =>
+        _analyticsRepository.GetOverviewAsync(cancellationToken);
 
     public Task<IReadOnlyList<AdminDateCountDto>> GetUserGrowthAsync(int days, CancellationToken cancellationToken = default) =>
         _analyticsRepository.GetUserGrowthAsync(days, cancellationToken);
 
     public Task<AdminFeatureUsageDto> GetFeatureUsageAsync(CancellationToken cancellationToken = default) =>
         _analyticsRepository.GetFeatureUsageAsync(cancellationToken);
+
+    public Task<AdminRevenueSummaryDto> GetRevenueSummaryAsync(CancellationToken cancellationToken = default) =>
+        _analyticsRepository.GetRevenueSummaryAsync(cancellationToken);
+
+    public Task<IReadOnlyList<AdminRevenueTrendDto>> GetRevenueTrendAsync(int days, CancellationToken cancellationToken = default) =>
+        _analyticsRepository.GetRevenueTrendAsync(days, cancellationToken);
 
     private static AdminUserDto ToDto(Domain.Entities.User u) =>
         new(u.Id, u.Username, u.Email, u.Role.Name, u.AccountTier.ToString(), u.IsBanned, u.CoinsBalance, u.CreatedAt, u.LastLoginAt);

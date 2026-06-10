@@ -16,6 +16,7 @@ public class StoreItemConfiguration : IEntityTypeConfiguration<StoreItem>
         builder.Property(x => x.Name).HasMaxLength(120).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.Property(x => x.AssetUrl).HasMaxLength(2048).IsRequired();
+        builder.Property(x => x.PreviewUrl).HasMaxLength(2048);
         builder.Property(x => x.RejectionNote).HasMaxLength(1000);
 
         builder.Property(x => x.IsActive).HasDefaultValue(true);

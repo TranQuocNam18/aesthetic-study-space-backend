@@ -137,7 +137,10 @@ public class UserThemeService : IUserThemeService
         Guid? effectItemId,
         Guid? ambientSoundItemId)
     {
-        if (stickerItemId is null || backgroundItemId is null || effectItemId is null || ambientSoundItemId is null)
-            throw new ValidationException("Theme submissions must include sticker, background, effect, and ambient sound components.");
+        var provided = new[] { stickerItemId, backgroundItemId, effectItemId, ambientSoundItemId }
+            .Count(id => id is not null);
+
+        if (provided < 2)
+            throw new ValidationException("Theme submissions must include at least 2 different component types (sticker, background, effect, or ambient sound).");
     }
 }

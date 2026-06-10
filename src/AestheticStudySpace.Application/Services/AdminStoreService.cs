@@ -61,6 +61,7 @@ public class AdminStoreService : IAdminStoreService
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
+            PreviewUrl = request.PreviewUrl?.Trim(),
             ThemeStickerItemId = request.ThemeStickerItemId,
             ThemeBackgroundItemId = request.ThemeBackgroundItemId,
             ThemeEffectItemId = request.ThemeEffectItemId,
@@ -90,6 +91,7 @@ public class AdminStoreService : IAdminStoreService
         item.Name = request.Name.Trim();
         item.Description = request.Description?.Trim();
         item.AssetUrl = request.AssetUrl.Trim();
+        item.PreviewUrl = request.PreviewUrl?.Trim();
         item.ThemeStickerItemId = request.ThemeStickerItemId;
         item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
         item.ThemeEffectItemId = request.ThemeEffectItemId;
@@ -220,7 +222,7 @@ public class AdminStoreService : IAdminStoreService
     }
 
     private static AdminStoreItemDto ToAdminDto(StoreItem x) =>
-        new(x.Id, x.Category, x.ThemeSource, x.Name, x.Description, x.AssetUrl,
+        new(x.Id, x.Category, x.ThemeSource, x.Name, x.Description, x.AssetUrl, x.PreviewUrl,
             x.ThemeStickerItemId, x.ThemeBackgroundItemId, x.ThemeEffectItemId, x.ThemeAmbientSoundItemId,
             x.IsPremium,
             x.CoinPrice, x.RealMoneyPriceVnd, x.IsActive,
@@ -238,7 +240,10 @@ public class AdminStoreService : IAdminStoreService
         if (category != StoreCategory.Theme)
             return;
 
-        if (stickerItemId is null || backgroundItemId is null || effectItemId is null || ambientSoundItemId is null)
-            throw new ValidationException("Theme items must include sticker, background, effect, and ambient sound components.");
+        var provided = new[] { stickerItemId, backgroundItemId, effectItemId, ambientSoundItemId }
+            .Count(id => id is not null);
+
+        if (provided < 2)
+            throw new ValidationException("Theme items must include at least 2 different component types (sticker, background, effect, or ambient sound).");
     }
 }

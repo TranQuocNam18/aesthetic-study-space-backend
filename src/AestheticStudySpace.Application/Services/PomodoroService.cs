@@ -29,7 +29,20 @@ public class PomodoroService : IPomodoroService
 
         var active = await _pomodoroRepository.GetActiveSessionAsync(userId, cancellationToken);
         if (active is not null)
-            throw new ValidationException("An active Pomodoro session already exists. End it before starting a new one.");
+        {
+            // Auto-expire: nếu session cũ đã quá thời gian (FE bị tắt đột ngột mà không cancel)
+            // thì xóa nó để cho phép tạo session mới.
+            var expectedEnd = active.StartTime.AddMinutes(active.DurationMinutes);
+            if (DateTime.UtcNow > expectedEnd)
+            {
+                await _pomodoroRepository.DeleteAsync(active, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                throw new ValidationException("An active Pomodoro session already exists. End it before starting a new one.");
+            }
+        }
 
         var session = new PomodoroSession
         {
