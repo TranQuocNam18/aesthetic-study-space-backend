@@ -117,4 +117,28 @@ public class CloudinaryMediaStorageService : IMediaStorageService
             return rawBytes;
         }
     }
+
+    public async Task<string> UploadImageAsync(byte[] bytes, string folder, CancellationToken cancellationToken = default)
+    {
+        if (bytes == null || bytes.Length == 0)
+            throw new ArgumentException("Image data is required.", nameof(bytes));
+
+        // Compress / resize image if it is too large or to optimize for web delivery
+        var raw = CompressImageIfNeeded(bytes);
+
+        await using var stream = new MemoryStream(raw);
+
+        var uploadParams = new ImageUploadParams
+        {
+            Folder = string.IsNullOrWhiteSpace(folder) ? null : folder.Trim(),
+            File = new FileDescription("upload.png", stream),
+            Overwrite = true
+        };
+
+        var result = await _cloudinary.UploadAsync(uploadParams, cancellationToken);
+        if (result.StatusCode is not System.Net.HttpStatusCode.OK and not System.Net.HttpStatusCode.Created)
+            throw new InvalidOperationException($"Cloudinary upload failed: {result.Error?.Message ?? result.StatusCode.ToString()}");
+
+        return result.SecureUrl?.ToString() ?? throw new InvalidOperationException("Cloudinary did not return a secure URL.");
+    }
 }
