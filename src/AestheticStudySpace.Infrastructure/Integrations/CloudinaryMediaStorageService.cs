@@ -8,10 +8,6 @@ namespace AestheticStudySpace.Infrastructure.Integrations;
 
 public class CloudinaryMediaStorageService : IMediaStorageService
 {
-    private static readonly Regex DataUriRegex = new(
-        @"^data:(?<mime>image\/[a-zA-Z0-9\+\-\.]+);base64,(?<data>[A-Za-z0-9\+/=\r\n]+)$",
-        RegexOptions.Compiled);
-
     private readonly Cloudinary _cloudinary;
 
     public CloudinaryMediaStorageService(IOptions<CloudinarySettings> settings)
@@ -28,11 +24,30 @@ public class CloudinaryMediaStorageService : IMediaStorageService
         if (string.IsNullOrWhiteSpace(base64DataUri))
             throw new ArgumentException("Image is required.", nameof(base64DataUri));
 
-        var match = DataUriRegex.Match(base64DataUri.Trim());
-        if (!match.Success)
+        var trimmed = base64DataUri.Trim();
+        if (!trimmed.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Invalid base64 data URI format. Expected data:image/*;base64,...", nameof(base64DataUri));
 
-        var raw = Convert.FromBase64String(match.Groups["data"].Value);
+        int commaIndex = trimmed.IndexOf(',');
+        if (commaIndex == -1)
+            throw new ArgumentException("Invalid base64 data URI format. Expected data:image/*;base64,...", nameof(base64DataUri));
+
+        var header = trimmed.Substring(0, commaIndex);
+        if (!header.Contains(";base64"))
+            throw new ArgumentException("Invalid base64 data URI format. Expected data:image/*;base64,...", nameof(base64DataUri));
+
+        string base64Data = trimmed.Substring(commaIndex + 1);
+
+        byte[] raw;
+        try
+        {
+            raw = Convert.FromBase64String(base64Data);
+        }
+        catch (FormatException ex)
+        {
+            throw new ArgumentException("Invalid base64 string format.", nameof(base64DataUri), ex);
+        }
+
         await using var stream = new MemoryStream(raw);
 
         var uploadParams = new ImageUploadParams

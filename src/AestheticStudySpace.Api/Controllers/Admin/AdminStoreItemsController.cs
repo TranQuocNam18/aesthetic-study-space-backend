@@ -61,6 +61,17 @@ public class AdminStoreItemsController : ControllerBase
         return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Store item updated."));
     }
 
+    /// <summary>Partially update an existing store item.</summary>
+    [HttpPatch("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> Patch(
+        Guid id,
+        [FromBody] PatchStoreItemRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.PatchAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Store item updated."));
+    }
+
     /// <summary>Soft-delete (deactivate) a store item.</summary>
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult<ApiResponse<object>>> Delete(Guid id, CancellationToken cancellationToken = default)

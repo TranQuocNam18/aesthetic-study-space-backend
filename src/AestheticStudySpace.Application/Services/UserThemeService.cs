@@ -53,6 +53,7 @@ public class UserThemeService : IUserThemeService
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
+            PreviewUrl = request.PreviewUrl?.Trim(),
             ThemeStickerItemId = request.ThemeStickerItemId,
             ThemeBackgroundItemId = request.ThemeBackgroundItemId,
             ThemeEffectItemId = request.ThemeEffectItemId,
@@ -123,8 +124,116 @@ public class UserThemeService : IUserThemeService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<UserThemeSubmissionDto> UpdateThemeAsync(
+        Guid userId,
+        Guid id,
+        SubmitThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new ValidationException("Name is required.");
+        if (string.IsNullOrWhiteSpace(request.AssetUrl))
+            throw new ValidationException("AssetUrl is required.");
+        if (request.CoinPrice is < 0)
+            throw new ValidationException("CoinPrice cannot be negative.");
+        if (request.RealMoneyPriceVnd is < 0)
+            throw new ValidationException("RealMoneyPriceVnd cannot be negative.");
+
+        var item = await _storeRepository.GetUserSubmissionByIdAsync(userId, id, cancellationToken)
+            ?? throw new NotFoundException("Theme submission not found.");
+
+        if (item.Status == StoreItemStatus.Approved)
+            throw new ValidationException("Cannot update an approved theme that is live in the store.");
+
+        item.Name = request.Name.Trim();
+        item.Description = request.Description?.Trim();
+        item.AssetUrl = request.AssetUrl.Trim();
+        item.PreviewUrl = request.PreviewUrl?.Trim();
+        item.ThemeStickerItemId = request.ThemeStickerItemId;
+        item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
+        item.ThemeEffectItemId = request.ThemeEffectItemId;
+        item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+        item.CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null;
+        item.RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null;
+
+        // Reset status to PendingReview and clear rejection notes when modified
+        item.Status = StoreItemStatus.PendingReview;
+        item.RejectionNote = null;
+        item.UpdatedAt = DateTime.UtcNow;
+
+        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ToDto(item);
+    }
+
+    public async Task<UserThemeSubmissionDto> PatchThemeAsync(
+        Guid userId,
+        Guid id,
+        PatchThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _storeRepository.GetUserSubmissionByIdAsync(userId, id, cancellationToken)
+            ?? throw new NotFoundException("Theme submission not found.");
+
+        if (item.Status == StoreItemStatus.Approved)
+            throw new ValidationException("Cannot update an approved theme that is live in the store.");
+
+        if (request.Name is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name))
+                throw new ValidationException("Name cannot be empty.");
+            item.Name = request.Name.Trim();
+        }
+
+        if (request.Description is not null)
+            item.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+
+        if (request.AssetUrl is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.AssetUrl))
+                throw new ValidationException("AssetUrl cannot be empty.");
+            item.AssetUrl = request.AssetUrl.Trim();
+        }
+
+        if (request.PreviewUrl is not null)
+            item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
+
+        if (request.ThemeStickerItemId != default)
+            item.ThemeStickerItemId = request.ThemeStickerItemId;
+
+        if (request.ThemeBackgroundItemId != default)
+            item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
+
+        if (request.ThemeEffectItemId != default)
+            item.ThemeEffectItemId = request.ThemeEffectItemId;
+
+        if (request.ThemeAmbientSoundItemId != default)
+            item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+
+        if (request.CoinPrice is not null)
+            item.CoinPrice = request.CoinPrice > 0 ? request.CoinPrice : null;
+
+        if (request.RealMoneyPriceVnd is not null)
+            item.RealMoneyPriceVnd = request.RealMoneyPriceVnd > 0 ? request.RealMoneyPriceVnd : null;
+
+        // Reset status to PendingReview and clear rejection notes when modified
+        item.Status = StoreItemStatus.PendingReview;
+        item.RejectionNote = null;
+        item.UpdatedAt = DateTime.UtcNow;
+
+        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ToDto(item);
+    }
+
     private static UserThemeSubmissionDto ToDto(StoreItem x) =>
-        new(x.Id, x.Name, x.Description, x.AssetUrl,
+        new(x.Id, x.Name, x.Description, x.AssetUrl, x.PreviewUrl,
             x.ThemeStickerItemId, x.ThemeBackgroundItemId, x.ThemeEffectItemId, x.ThemeAmbientSoundItemId,
             x.CoinPrice, x.RealMoneyPriceVnd,
             x.ThemeSource ?? StoreThemeSource.Community,

@@ -109,6 +109,72 @@ public class AdminStoreService : IAdminStoreService
         return ToAdminDto(item);
     }
 
+    public async Task<AdminStoreItemDto> PatchAsync(Guid id, PatchStoreItemRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var item = await _storeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Store item not found.");
+
+        if (request.Category is not null)
+            item.Category = request.Category.Value;
+
+        if (request.Category is not null || request.ThemeSource is not null)
+        {
+            item.ThemeSource = item.Category == StoreCategory.Theme ? request.ThemeSource ?? item.ThemeSource ?? StoreThemeSource.Official : null;
+        }
+
+        if (request.Name is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name))
+                throw new ValidationException("Name is required.");
+            item.Name = request.Name.Trim();
+        }
+
+        if (request.Description is not null)
+            item.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+
+        if (request.AssetUrl is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.AssetUrl))
+                throw new ValidationException("AssetUrl is required.");
+            item.AssetUrl = request.AssetUrl.Trim();
+        }
+
+        if (request.PreviewUrl is not null)
+            item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
+
+        if (request.ThemeStickerItemId != default)
+            item.ThemeStickerItemId = request.ThemeStickerItemId;
+
+        if (request.ThemeBackgroundItemId != default)
+            item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
+
+        if (request.ThemeEffectItemId != default)
+            item.ThemeEffectItemId = request.ThemeEffectItemId;
+
+        if (request.ThemeAmbientSoundItemId != default)
+            item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+
+        if (request.IsPremium is not null)
+            item.IsPremium = request.IsPremium.Value;
+
+        if (request.CoinPrice is not null)
+            item.CoinPrice = NormalizeCoinPrice(request.CoinPrice);
+
+        if (request.RealMoneyPriceVnd is not null)
+            item.RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd);
+
+        if (request.IsActive is not null)
+            item.IsActive = request.IsActive.Value;
+
+        item.UpdatedAt = DateTime.UtcNow;
+
+        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToAdminDto(item);
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var item = await _storeRepository.GetByIdAsync(id, cancellationToken)

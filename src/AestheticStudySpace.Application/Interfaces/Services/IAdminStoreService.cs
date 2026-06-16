@@ -10,6 +10,7 @@ public interface IAdminStoreService
     Task<AdminStoreItemDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<AdminStoreItemDto> CreateAsync(CreateStoreItemRequestDto request, CancellationToken cancellationToken = default);
     Task<AdminStoreItemDto> UpdateAsync(Guid id, UpdateStoreItemRequestDto request, CancellationToken cancellationToken = default);
+    Task<AdminStoreItemDto> PatchAsync(Guid id, PatchStoreItemRequestDto request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
     // ── User theme review workflow ─────────────────────────────────────────────

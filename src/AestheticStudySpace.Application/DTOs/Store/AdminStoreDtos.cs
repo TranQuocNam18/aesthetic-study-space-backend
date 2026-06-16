@@ -64,3 +64,20 @@ public record ApproveThemeRequestDto(
     bool IsPremium = false);
 
 public record RejectThemeRequestDto(string RejectionNote);
+
+public record PatchStoreItemRequestDto(
+    StoreCategory? Category = null,
+    StoreThemeSource? ThemeSource = null,
+    string? Name = null,
+    string? Description = null,
+    string? AssetUrl = null,
+    string? PreviewUrl = null,
+    Guid? ThemeStickerItemId = null,
+    Guid? ThemeBackgroundItemId = null,
+    Guid? ThemeEffectItemId = null,
+    Guid? ThemeAmbientSoundItemId = null,
+    bool? IsPremium = null,
+    int? CoinPrice = null,
+    long? RealMoneyPriceVnd = null,
+    bool? IsActive = null);
+
