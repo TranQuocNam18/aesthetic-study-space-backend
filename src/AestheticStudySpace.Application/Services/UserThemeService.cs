@@ -66,7 +66,7 @@ public class UserThemeService : IUserThemeService
             Status = StoreItemStatus.PendingReview
         };
 
-        await ValidateThemeComponentsAsync(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, cancellationToken);
+        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
 
         await _storeRepository.AddStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -161,7 +161,7 @@ public class UserThemeService : IUserThemeService
         item.RejectionNote = null;
         item.UpdatedAt = DateTime.UtcNow;
 
-        await ValidateThemeComponentsAsync(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, cancellationToken);
+        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -224,7 +224,7 @@ public class UserThemeService : IUserThemeService
         item.RejectionNote = null;
         item.UpdatedAt = DateTime.UtcNow;
 
-        await ValidateThemeComponentsAsync(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, cancellationToken);
+        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -240,45 +240,22 @@ public class UserThemeService : IUserThemeService
             x.Status, x.RejectionNote,
             x.CreatedAt, x.ReviewedAt);
 
-    private async Task ValidateThemeComponentsAsync(
+    private static void ValidateThemeComponents(
         Guid? stickerItemId,
         Guid? backgroundItemId,
         Guid? effectItemId,
-        Guid? ambientSoundItemId,
-        CancellationToken cancellationToken)
+        Guid? ambientSoundItemId)
     {
-        var provided = new[] { stickerItemId, backgroundItemId, effectItemId, ambientSoundItemId }
-            .Count(id => id is not null && id != Guid.Empty);
+        // Normalize: treat Guid.Empty the same as null (not provided)
+        var ids = new[] { stickerItemId, backgroundItemId, effectItemId, ambientSoundItemId }
+            .Select(id => (id == null || id == Guid.Empty) ? (Guid?)null : id)
+            .ToArray();
+
+        var provided = ids.Count(id => id is not null);
 
         if (provided < 2)
-            throw new ValidationException("Theme submissions must include at least 2 different component types (sticker, background, effect, or ambient sound).");
-
-        if (stickerItemId is not null && stickerItemId != Guid.Empty)
-        {
-            var item = await _storeRepository.GetByIdAsync(stickerItemId.Value, cancellationToken);
-            if (item == null || item.IsDeleted || item.Category != StoreCategory.Sticker)
-                throw new ValidationException("Sticker item does not exist or is invalid.");
-        }
-
-        if (backgroundItemId is not null && backgroundItemId != Guid.Empty)
-        {
-            var item = await _storeRepository.GetByIdAsync(backgroundItemId.Value, cancellationToken);
-            if (item == null || item.IsDeleted || item.Category != StoreCategory.Background)
-                throw new ValidationException("Background item does not exist or is invalid.");
-        }
-
-        if (effectItemId is not null && effectItemId != Guid.Empty)
-        {
-            var item = await _storeRepository.GetByIdAsync(effectItemId.Value, cancellationToken);
-            if (item == null || item.IsDeleted || item.Category != StoreCategory.Effect)
-                throw new ValidationException("Effect item does not exist or is invalid.");
-        }
-
-        if (ambientSoundItemId is not null && ambientSoundItemId != Guid.Empty)
-        {
-            var item = await _storeRepository.GetByIdAsync(ambientSoundItemId.Value, cancellationToken);
-            if (item == null || item.IsDeleted || item.Category != StoreCategory.AmbientSound)
-                throw new ValidationException("Ambient sound item does not exist or is invalid.");
-        }
+            throw new ValidationException(
+                "Theme submissions must include at least 2 different component types " +
+                "(sticker, background, effect, or ambient sound).");
     }
 }
