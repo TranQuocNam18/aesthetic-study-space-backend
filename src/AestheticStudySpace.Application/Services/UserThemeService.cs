@@ -54,10 +54,10 @@ public class UserThemeService : IUserThemeService
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
             PreviewUrl = request.PreviewUrl?.Trim(),
-            ThemeStickerItemId = request.ThemeStickerItemId,
-            ThemeBackgroundItemId = request.ThemeBackgroundItemId,
-            ThemeEffectItemId = request.ThemeEffectItemId,
-            ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId,
+            ThemeStickerItemId = request.ThemeStickerItemId == Guid.Empty ? null : request.ThemeStickerItemId,
+            ThemeBackgroundItemId = request.ThemeBackgroundItemId == Guid.Empty ? null : request.ThemeBackgroundItemId,
+            ThemeEffectItemId = request.ThemeEffectItemId == Guid.Empty ? null : request.ThemeEffectItemId,
+            ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId == Guid.Empty ? null : request.ThemeAmbientSoundItemId,
             IsPremium = false,
             CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null,
             RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null,
@@ -66,7 +66,7 @@ public class UserThemeService : IUserThemeService
             Status = StoreItemStatus.PendingReview
         };
 
-        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+        await ValidateThemeComponentsAsync(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, cancellationToken);
 
         await _storeRepository.AddStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -149,10 +149,10 @@ public class UserThemeService : IUserThemeService
         item.Description = request.Description?.Trim();
         item.AssetUrl = request.AssetUrl.Trim();
         item.PreviewUrl = request.PreviewUrl?.Trim();
-        item.ThemeStickerItemId = request.ThemeStickerItemId;
-        item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
-        item.ThemeEffectItemId = request.ThemeEffectItemId;
-        item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+        item.ThemeStickerItemId = request.ThemeStickerItemId == Guid.Empty ? null : request.ThemeStickerItemId;
+        item.ThemeBackgroundItemId = request.ThemeBackgroundItemId == Guid.Empty ? null : request.ThemeBackgroundItemId;
+        item.ThemeEffectItemId = request.ThemeEffectItemId == Guid.Empty ? null : request.ThemeEffectItemId;
+        item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId == Guid.Empty ? null : request.ThemeAmbientSoundItemId;
         item.CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null;
         item.RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null;
 
@@ -161,7 +161,7 @@ public class UserThemeService : IUserThemeService
         item.RejectionNote = null;
         item.UpdatedAt = DateTime.UtcNow;
 
-        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+        await ValidateThemeComponentsAsync(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, cancellationToken);
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -202,16 +202,16 @@ public class UserThemeService : IUserThemeService
             item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
 
         if (request.ThemeStickerItemId != default)
-            item.ThemeStickerItemId = request.ThemeStickerItemId;
+            item.ThemeStickerItemId = request.ThemeStickerItemId == Guid.Empty ? null : request.ThemeStickerItemId;
 
         if (request.ThemeBackgroundItemId != default)
-            item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
+            item.ThemeBackgroundItemId = request.ThemeBackgroundItemId == Guid.Empty ? null : request.ThemeBackgroundItemId;
 
         if (request.ThemeEffectItemId != default)
-            item.ThemeEffectItemId = request.ThemeEffectItemId;
+            item.ThemeEffectItemId = request.ThemeEffectItemId == Guid.Empty ? null : request.ThemeEffectItemId;
 
         if (request.ThemeAmbientSoundItemId != default)
-            item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+            item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId == Guid.Empty ? null : request.ThemeAmbientSoundItemId;
 
         if (request.CoinPrice is not null)
             item.CoinPrice = request.CoinPrice > 0 ? request.CoinPrice : null;
@@ -224,7 +224,7 @@ public class UserThemeService : IUserThemeService
         item.RejectionNote = null;
         item.UpdatedAt = DateTime.UtcNow;
 
-        ValidateThemeComponents(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+        await ValidateThemeComponentsAsync(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, cancellationToken);
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -240,16 +240,45 @@ public class UserThemeService : IUserThemeService
             x.Status, x.RejectionNote,
             x.CreatedAt, x.ReviewedAt);
 
-    private static void ValidateThemeComponents(
+    private async Task ValidateThemeComponentsAsync(
         Guid? stickerItemId,
         Guid? backgroundItemId,
         Guid? effectItemId,
-        Guid? ambientSoundItemId)
+        Guid? ambientSoundItemId,
+        CancellationToken cancellationToken)
     {
         var provided = new[] { stickerItemId, backgroundItemId, effectItemId, ambientSoundItemId }
-            .Count(id => id is not null);
+            .Count(id => id is not null && id != Guid.Empty);
 
         if (provided < 2)
             throw new ValidationException("Theme submissions must include at least 2 different component types (sticker, background, effect, or ambient sound).");
+
+        if (stickerItemId is not null && stickerItemId != Guid.Empty)
+        {
+            var item = await _storeRepository.GetByIdAsync(stickerItemId.Value, cancellationToken);
+            if (item == null || item.IsDeleted || item.Category != StoreCategory.Sticker)
+                throw new ValidationException("Sticker item does not exist or is invalid.");
+        }
+
+        if (backgroundItemId is not null && backgroundItemId != Guid.Empty)
+        {
+            var item = await _storeRepository.GetByIdAsync(backgroundItemId.Value, cancellationToken);
+            if (item == null || item.IsDeleted || item.Category != StoreCategory.Background)
+                throw new ValidationException("Background item does not exist or is invalid.");
+        }
+
+        if (effectItemId is not null && effectItemId != Guid.Empty)
+        {
+            var item = await _storeRepository.GetByIdAsync(effectItemId.Value, cancellationToken);
+            if (item == null || item.IsDeleted || item.Category != StoreCategory.Effect)
+                throw new ValidationException("Effect item does not exist or is invalid.");
+        }
+
+        if (ambientSoundItemId is not null && ambientSoundItemId != Guid.Empty)
+        {
+            var item = await _storeRepository.GetByIdAsync(ambientSoundItemId.Value, cancellationToken);
+            if (item == null || item.IsDeleted || item.Category != StoreCategory.AmbientSound)
+                throw new ValidationException("Ambient sound item does not exist or is invalid.");
+        }
     }
 }
