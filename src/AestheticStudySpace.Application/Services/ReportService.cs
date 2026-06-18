@@ -90,7 +90,7 @@ public class ReportService : IReportService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Send email notification to support inbox (fire-and-forget, don't block response)
-        _ = SendSupportEmailAsync(user, report, cancellationToken);
+        _ = SendSupportEmailAsync(user, report, CancellationToken.None);
 
         return new ReportResponseDto(
             report.Id, 
