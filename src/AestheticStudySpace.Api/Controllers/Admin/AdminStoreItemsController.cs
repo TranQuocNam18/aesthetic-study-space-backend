@@ -80,13 +80,8 @@ public class AdminStoreItemsController : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { }, "Store item deactivated."));
     }
 
-    // ── User-submitted theme review workflow ──────────────────────────────────
 
-    /// <summary>
-    /// List all pending-review submissions waiting for admin review (sorted oldest-first — FIFO).
-    /// Use ?category= to filter: 0=Theme, 1=Background, 2=Sticker, 3=Effect, 4=AmbientSound.
-    /// Inline components (part of a mixed Theme combo) are excluded — they are reviewed with their parent Theme.
-    /// </summary>
+
     [HttpGet("pending")]
     public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPendingSubmissions(
         [FromQuery] StoreCategory? category = null,
@@ -99,9 +94,7 @@ public class AdminStoreItemsController : ControllerBase
     }
 
     /// <summary>
-    /// Approve a user-submitted Theme combo. Sets status to Approved and makes it visible in the store.
-    /// Also automatically approves all inline components (self-uploaded assets) that are part of this Theme combo.
-    /// Admin can optionally adjust pricing before approving.
+    /// Approve a user-submitted Theme.
     /// </summary>
     [HttpPost("{id:guid}/approve")]
     public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> ApproveTheme(
@@ -114,8 +107,7 @@ public class AdminStoreItemsController : ControllerBase
     }
 
     /// <summary>
-    /// Reject a user-submitted Theme combo. Sets status to Rejected, item stays hidden.
-    /// Also automatically rejects all inline components that are part of this Theme combo.
+    /// Reject a user-submitted Theme combo.
     /// A rejection note explaining the reason is required.
     /// </summary>
     [HttpPost("{id:guid}/reject")]
@@ -130,7 +122,6 @@ public class AdminStoreItemsController : ControllerBase
 
     /// <summary>
     /// Approve a user-submitted standalone component (Sticker / Background / Effect / AmbientSound).
-    /// Sets status to Approved and makes it visible in the store.
     /// Admin can optionally adjust pricing before approving.
     /// </summary>
     [HttpPost("{id:guid}/approve-component")]

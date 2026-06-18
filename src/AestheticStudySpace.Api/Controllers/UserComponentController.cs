@@ -27,7 +27,6 @@ public class UserComponentController : ControllerBase
 
     /// <summary>
     /// Submit a new self-designed component (Sticker / Background / Effect / AmbientSound) for admin review.
-    /// The component will be visible in the store only after an admin approves it.
     /// AssetUrl must be a Cloudinary URL already uploaded by the client (use POST /api/media/upload or /api/media/upload-audio).
     /// </summary>
     [HttpPost]
@@ -41,7 +40,7 @@ public class UserComponentController : ControllerBase
     }
 
     /// <summary>
-    /// List all standalone components submitted by the current user (any status: PendingReview, Approved, Rejected).
+    /// List all components submitted by the current user (any status: PendingReview, Approved, Rejected).
     /// Optional filter by category (Sticker=2, Background=1, Effect=3, AmbientSound=4).
     /// </summary>
     [HttpGet]

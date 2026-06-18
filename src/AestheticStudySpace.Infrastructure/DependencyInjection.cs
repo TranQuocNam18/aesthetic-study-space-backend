@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRoomConfigRepository, UserRoomConfigRepository>();
         services.AddScoped<ITodoRepository, TodoRepository>();
         services.AddScoped<IPomodoroRepository, PomodoroRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IMediaStorageService, CloudinaryMediaStorageService>();
