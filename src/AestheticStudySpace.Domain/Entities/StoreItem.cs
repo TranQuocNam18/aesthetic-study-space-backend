@@ -45,5 +45,13 @@ public class StoreItem : BaseEntity
 
     /// <summary>When Admin reviewed (approved or rejected) this submission.</summary>
     public DateTime? ReviewedAt { get; set; }
+
+    /// <summary>
+    /// When a user submits a "mixed" Theme combo that includes self-uploaded components
+    /// (i.e. components not yet in the store), this points to the parent Theme StoreItem.
+    /// Null for standalone items (admin-created, or user-submitted components submitted independently).
+    /// </summary>
+    public Guid? ParentThemeId { get; set; }
+    public StoreItem? ParentTheme { get; set; }
 }
 

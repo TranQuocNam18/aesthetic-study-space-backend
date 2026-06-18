@@ -141,4 +141,28 @@ public class CloudinaryMediaStorageService : IMediaStorageService
 
         return result.SecureUrl?.ToString() ?? throw new InvalidOperationException("Cloudinary did not return a secure URL.");
     }
+
+    public async Task<string> UploadRawFileAsync(byte[] bytes, string originalFileName, string folder, CancellationToken cancellationToken = default)
+    {
+        if (bytes == null || bytes.Length == 0)
+            throw new ArgumentException("File data is required.", nameof(bytes));
+
+        if (string.IsNullOrWhiteSpace(originalFileName))
+            throw new ArgumentException("Original file name is required.", nameof(originalFileName));
+
+        await using var stream = new MemoryStream(bytes);
+
+        var uploadParams = new RawUploadParams
+        {
+            Folder = string.IsNullOrWhiteSpace(folder) ? null : folder.Trim(),
+            File = new FileDescription(originalFileName, stream),
+            Overwrite = true
+        };
+
+        var result = await _cloudinary.UploadAsync(uploadParams);
+        if (result.StatusCode is not System.Net.HttpStatusCode.OK and not System.Net.HttpStatusCode.Created)
+            throw new InvalidOperationException($"Cloudinary upload failed: {result.Error?.Message ?? result.StatusCode.ToString()}");
+
+        return result.SecureUrl?.ToString() ?? throw new InvalidOperationException("Cloudinary did not return a secure URL.");
+    }
 }

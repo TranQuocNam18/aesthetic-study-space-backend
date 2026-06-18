@@ -83,21 +83,24 @@ public class AdminStoreItemsController : ControllerBase
     // ── User-submitted theme review workflow ──────────────────────────────────
 
     /// <summary>
-    /// List user-submitted themes that are waiting for admin review (status = PendingReview).
-    /// Sorted oldest-first (FIFO queue).
+    /// List all pending-review submissions waiting for admin review (sorted oldest-first — FIFO).
+    /// Use ?category= to filter: 0=Theme, 1=Background, 2=Sticker, 3=Effect, 4=AmbientSound.
+    /// Inline components (part of a mixed Theme combo) are excluded — they are reviewed with their parent Theme.
     /// </summary>
     [HttpGet("pending")]
-    public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPendingThemes(
+    public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPendingSubmissions(
+        [FromQuery] StoreCategory? category = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _adminStoreService.GetPendingThemesAsync(page, pageSize, cancellationToken);
+        var result = await _adminStoreService.GetPendingSubmissionsAsync(category, page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResult<AdminStoreItemDto>>.Ok(result));
     }
 
     /// <summary>
-    /// Approve a user-submitted theme. Sets status to Approved and makes it visible in the store.
+    /// Approve a user-submitted Theme combo. Sets status to Approved and makes it visible in the store.
+    /// Also automatically approves all inline components (self-uploaded assets) that are part of this Theme combo.
     /// Admin can optionally adjust pricing before approving.
     /// </summary>
     [HttpPost("{id:guid}/approve")]
@@ -111,7 +114,8 @@ public class AdminStoreItemsController : ControllerBase
     }
 
     /// <summary>
-    /// Reject a user-submitted theme. Sets status to Rejected, item stays hidden.
+    /// Reject a user-submitted Theme combo. Sets status to Rejected, item stays hidden.
+    /// Also automatically rejects all inline components that are part of this Theme combo.
     /// A rejection note explaining the reason is required.
     /// </summary>
     [HttpPost("{id:guid}/reject")]
@@ -122,5 +126,34 @@ public class AdminStoreItemsController : ControllerBase
     {
         var item = await _adminStoreService.RejectPendingThemeAsync(id, request, cancellationToken);
         return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Theme rejected."));
+    }
+
+    /// <summary>
+    /// Approve a user-submitted standalone component (Sticker / Background / Effect / AmbientSound).
+    /// Sets status to Approved and makes it visible in the store.
+    /// Admin can optionally adjust pricing before approving.
+    /// </summary>
+    [HttpPost("{id:guid}/approve-component")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> ApproveComponent(
+        Guid id,
+        [FromBody] ApproveComponentRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.ApprovePendingComponentAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Component approved and is now visible in the store."));
+    }
+
+    /// <summary>
+    /// Reject a user-submitted standalone component (Sticker / Background / Effect / AmbientSound).
+    /// Sets status to Rejected, item stays hidden. A rejection note is required.
+    /// </summary>
+    [HttpPost("{id:guid}/reject-component")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> RejectComponent(
+        Guid id,
+        [FromBody] RejectThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.RejectPendingComponentAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Component rejected."));
     }
 }

@@ -63,6 +63,12 @@ public record ApproveThemeRequestDto(
     long? RealMoneyPriceVnd,
     bool IsPremium = false);
 
+/// <summary>Admin approval DTO for standalone components (Sticker / Background / Effect / AmbientSound).</summary>
+public record ApproveComponentRequestDto(
+    int? CoinPrice,
+    long? RealMoneyPriceVnd,
+    bool IsPremium = false);
+
 public record RejectThemeRequestDto(string RejectionNote);
 
 public record PatchStoreItemRequestDto(

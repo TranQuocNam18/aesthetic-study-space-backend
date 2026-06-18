@@ -36,5 +36,14 @@ public class StoreItemConfiguration : IEntityTypeConfiguration<StoreItem>
         builder.HasIndex(x => x.IsPremium);
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.CreatorId);
+
+        // ParentThemeId: self-referencing FK for inline components of a mixed Theme combo
+        builder.HasOne(x => x.ParentTheme)
+            .WithMany()
+            .HasForeignKey(x => x.ParentThemeId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        builder.HasIndex(x => x.ParentThemeId);
     }
 }

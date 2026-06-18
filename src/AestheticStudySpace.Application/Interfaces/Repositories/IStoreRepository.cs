@@ -37,7 +37,19 @@ public interface IStoreRepository
     Task<IReadOnlyList<StoreItem>> GetUserSubmissionsAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<StoreItem?> GetUserSubmissionByIdAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default);
 
+    // ── User component submission (standalone, non-Theme) ──────────────────────
+    Task<int> CountUserComponentSubmissionsAsync(Guid userId, StoreCategory? category, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetUserComponentSubmissionsAsync(Guid userId, StoreCategory? category, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<StoreItem?> GetUserComponentSubmissionByIdAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default);
+
+    // ── Inline components (attached to a mixed Theme combo) ────────────────────
+    /// <summary>Returns all StoreItems that were created inline as part of the given Theme combo.</summary>
+    Task<IReadOnlyList<StoreItem>> GetInlineComponentsByThemeIdAsync(Guid themeId, CancellationToken cancellationToken = default);
+
+    /// <summary>Bulk-update status + IsActive + ReviewedAt for a set of item IDs in one shot.</summary>
+    Task BulkUpdateStatusAsync(IReadOnlyList<Guid> itemIds, StoreItemStatus status, bool isActive, DateTime reviewedAt, CancellationToken cancellationToken = default);
+
     // ── Admin pending review ───────────────────────────────────────────────────
-    Task<int> CountPendingReviewAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<StoreItem>> GetPendingReviewAsync(int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<int> CountPendingReviewAsync(StoreCategory? category, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetPendingReviewAsync(StoreCategory? category, int page, int pageSize, CancellationToken cancellationToken = default);
 }
