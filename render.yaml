@@ -38,6 +38,10 @@ services:
         value: http://localhost:3000
       - key: Cors__AllowedOrigins__3
         value: http://localhost:5173
+      - key: Cors__AllowedOrigins__4
+        value: https://aesthetic.live
+      - key: Cors__AllowedOrigins__5
+        value: https://www.aesthetic.live
       
       # Google Auth
       - key: GoogleAuth__ClientId
@@ -81,7 +85,7 @@ services:
       
       # App Settings
       - key: App__FrontendBaseUrl
-        value: https://aestheticspaceproject.vercel.app
+        value: https://aesthetic.live
       
       # Logging
       - key: Logging__LogLevel__Default
