@@ -22,5 +22,8 @@ public class SubscriptionRepository : ISubscriptionRepository
         _context.Subscriptions.Update(subscription);
         return Task.CompletedTask;
     }
+
+    public Task<bool> HasUsedTrialAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        _context.Subscriptions.AnyAsync(x => x.UserId == userId && x.PaymentTransactionId == null, cancellationToken);
 }
 

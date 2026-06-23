@@ -15,6 +15,7 @@ public record RoomAssetDto(
     string Url,
     int DefaultVolume,
     bool IsPremium,
+    string? PreviewUrl,
     double DefaultPositionX,
     double DefaultPositionY,
     double DefaultScale,

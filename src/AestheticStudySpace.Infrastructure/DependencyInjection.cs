@@ -102,6 +102,7 @@ public static class DependencyInjection
 
         services.AddAuthorization();
         services.AddHostedService<MissionResetWorker>();
+        services.AddHostedService<SubscriptionExpirationWorker>();
 
         return services;
     }

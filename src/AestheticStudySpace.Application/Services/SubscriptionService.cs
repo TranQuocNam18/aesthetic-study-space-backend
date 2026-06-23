@@ -85,5 +85,44 @@ public class SubscriptionService : ISubscriptionService
             subscriptionEndsAt = active.EndsAt
         };
     }
+
+    public async Task<object> ActivateTrialAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User not found.");
+
+        if (user.IsBanned)
+            throw new UnauthorizedException("User is banned.");
+
+        if (user.AccountTier == AccountTier.Premium)
+            throw new ValidationException("User is already a Premium member.");
+
+        var alreadyUsedTrial = await _subscriptionRepository.HasUsedTrialAsync(userId, cancellationToken);
+        if (alreadyUsedTrial)
+            throw new ValidationException("You have already used your free trial.");
+
+        var now = DateTime.UtcNow;
+        var trialSubscription = new Subscription
+        {
+            UserId = userId,
+            StartsAt = now,
+            EndsAt = now.AddDays(5),
+            IsActive = true,
+            PaymentTransactionId = null
+        };
+
+        await _subscriptionRepository.AddAsync(trialSubscription, cancellationToken);
+
+        user.AccountTier = AccountTier.Premium;
+        await _userRepository.UpdateAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new
+        {
+            trialActivated = true,
+            tier = user.AccountTier.ToString(),
+            subscriptionEndsAt = trialSubscription.EndsAt
+        };
+    }
 }
 

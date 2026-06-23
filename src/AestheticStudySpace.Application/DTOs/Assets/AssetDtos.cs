@@ -8,7 +8,8 @@ public record AssetDto(
     string Type,
     string Category,
     int DefaultVolume,
-    bool IsPremium);
+    bool IsPremium,
+    string? PreviewUrl);
 
 public record CreateAssetRequestDto(
     string Name,
@@ -17,7 +18,8 @@ public record CreateAssetRequestDto(
     string Type,
     string Category,
     int DefaultVolume,
-    bool IsPremium);
+    bool IsPremium,
+    string? PreviewUrl = null);
 
 public record UpdateAssetRequestDto(
     string Name,
@@ -26,7 +28,8 @@ public record UpdateAssetRequestDto(
     string Type,
     string Category,
     int DefaultVolume,
-    bool IsPremium);
+    bool IsPremium,
+    string? PreviewUrl = null);
 
 public record RoomAssetMappingRequestDto(
     Guid AssetId,
