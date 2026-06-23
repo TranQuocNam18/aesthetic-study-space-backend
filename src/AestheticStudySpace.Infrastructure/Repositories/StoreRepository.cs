@@ -273,13 +273,94 @@ public class StoreRepository : IStoreRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == itemId && x.CreatorId == userId && !x.IsDeleted, cancellationToken);
 
+    // ── User component submission (standalone, non-Theme) ──────────────────────
+
+    public Task<int> CountUserComponentSubmissionsAsync(Guid userId, StoreCategory? category, CancellationToken cancellationToken = default)
+    {
+        var query = _context.StoreItems.AsNoTracking()
+            .Where(x => x.CreatorId == userId && x.Category != StoreCategory.Theme && !x.IsDeleted && x.ParentThemeId == null);
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+        return query.CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<StoreItem>> GetUserComponentSubmissionsAsync(
+        Guid userId,
+        StoreCategory? category,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 50 ? 20 : pageSize;
+
+        var query = _context.StoreItems.AsNoTracking()
+            .Where(x => x.CreatorId == userId && x.Category != StoreCategory.Theme && !x.IsDeleted && x.ParentThemeId == null);
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+
+        return await query
+            .OrderByDescending(x => x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<StoreItem?> GetUserComponentSubmissionByIdAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default) =>
+        _context.StoreItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.Id == itemId &&
+                x.CreatorId == userId &&
+                x.Category != StoreCategory.Theme &&
+                x.ParentThemeId == null &&
+                !x.IsDeleted,
+                cancellationToken);
+
+    // ── Inline components (attached to a mixed Theme combo) ────────────────────
+
+    public async Task<IReadOnlyList<StoreItem>> GetInlineComponentsByThemeIdAsync(Guid themeId, CancellationToken cancellationToken = default) =>
+        await _context.StoreItems
+            .AsNoTracking()
+            .Where(x => x.ParentThemeId == themeId && !x.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+    public async Task BulkUpdateStatusAsync(
+        IReadOnlyList<Guid> itemIds,
+        StoreItemStatus status,
+        bool isActive,
+        DateTime reviewedAt,
+        CancellationToken cancellationToken = default)
+    {
+        if (itemIds.Count == 0) return;
+
+        var items = await _context.StoreItems
+            .Where(x => itemIds.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+
+        foreach (var item in items)
+        {
+            item.Status = status;
+            item.IsActive = isActive;
+            item.ReviewedAt = reviewedAt;
+            item.UpdatedAt = reviewedAt;
+        }
+    }
+
     // ── Admin pending review ───────────────────────────────────────────────────
 
-    public Task<int> CountPendingReviewAsync(CancellationToken cancellationToken = default) =>
-        _context.StoreItems.AsNoTracking()
-            .CountAsync(x => x.Status == StoreItemStatus.PendingReview && !x.IsDeleted, cancellationToken);
+    public Task<int> CountPendingReviewAsync(StoreCategory? category, CancellationToken cancellationToken = default)
+    {
+        // Exclude inline components from the admin review queue — they are reviewed implicitly with their parent Theme
+        var query = _context.StoreItems.AsNoTracking()
+            .Where(x => x.Status == StoreItemStatus.PendingReview && !x.IsDeleted && x.ParentThemeId == null);
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+        return query.CountAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<StoreItem>> GetPendingReviewAsync(
+        StoreCategory? category,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -287,10 +368,15 @@ public class StoreRepository : IStoreRepository
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
 
-        return await _context.StoreItems
-            .AsNoTracking()
+        // Exclude inline components from the admin review queue — they are reviewed implicitly with their parent Theme
+        var query = _context.StoreItems.AsNoTracking()
             .Include(x => x.Creator)
-            .Where(x => x.Status == StoreItemStatus.PendingReview && !x.IsDeleted)
+            .Where(x => x.Status == StoreItemStatus.PendingReview && !x.IsDeleted && x.ParentThemeId == null);
+
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+
+        return await query
             .OrderBy(x => x.CreatedAt) // oldest first — FIFO review queue
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

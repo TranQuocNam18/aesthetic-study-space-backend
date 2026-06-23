@@ -11,6 +11,7 @@ public class Asset : BaseEntity
     public AssetCategory Category { get; set; }
     public int DefaultVolume { get; set; } = 70;
     public bool IsPremium { get; set; }
+    public string? PreviewUrl { get; set; }
 
     public ICollection<RoomAssetMapping> RoomMappings { get; set; } = new List<RoomAssetMapping>();
 }

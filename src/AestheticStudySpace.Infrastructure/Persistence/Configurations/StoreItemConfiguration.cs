@@ -16,6 +16,7 @@ public class StoreItemConfiguration : IEntityTypeConfiguration<StoreItem>
         builder.Property(x => x.Name).HasMaxLength(120).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.Property(x => x.AssetUrl).HasMaxLength(2048).IsRequired();
+        builder.Property(x => x.PreviewUrl).HasMaxLength(2048);
         builder.Property(x => x.RejectionNote).HasMaxLength(1000);
 
         builder.Property(x => x.IsActive).HasDefaultValue(true);
@@ -35,5 +36,14 @@ public class StoreItemConfiguration : IEntityTypeConfiguration<StoreItem>
         builder.HasIndex(x => x.IsPremium);
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.CreatorId);
+
+        // ParentThemeId: self-referencing FK for inline components of a mixed Theme combo
+        builder.HasOne(x => x.ParentTheme)
+            .WithMany()
+            .HasForeignKey(x => x.ParentThemeId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
+
+        builder.HasIndex(x => x.ParentThemeId);
     }
 }

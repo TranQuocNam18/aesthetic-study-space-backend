@@ -61,6 +61,7 @@ public class AdminStoreService : IAdminStoreService
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
+            PreviewUrl = request.PreviewUrl?.Trim(),
             ThemeStickerItemId = request.ThemeStickerItemId,
             ThemeBackgroundItemId = request.ThemeBackgroundItemId,
             ThemeEffectItemId = request.ThemeEffectItemId,
@@ -90,6 +91,7 @@ public class AdminStoreService : IAdminStoreService
         item.Name = request.Name.Trim();
         item.Description = request.Description?.Trim();
         item.AssetUrl = request.AssetUrl.Trim();
+        item.PreviewUrl = request.PreviewUrl?.Trim();
         item.ThemeStickerItemId = request.ThemeStickerItemId;
         item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
         item.ThemeEffectItemId = request.ThemeEffectItemId;
@@ -98,6 +100,72 @@ public class AdminStoreService : IAdminStoreService
         item.CoinPrice = NormalizeCoinPrice(request.CoinPrice);
         item.RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd);
         item.IsActive = request.IsActive;
+        item.UpdatedAt = DateTime.UtcNow;
+
+        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToAdminDto(item);
+    }
+
+    public async Task<AdminStoreItemDto> PatchAsync(Guid id, PatchStoreItemRequestDto request, CancellationToken cancellationToken = default)
+    {
+        var item = await _storeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Store item not found.");
+
+        if (request.Category is not null)
+            item.Category = request.Category.Value;
+
+        if (request.Category is not null || request.ThemeSource is not null)
+        {
+            item.ThemeSource = item.Category == StoreCategory.Theme ? request.ThemeSource ?? item.ThemeSource ?? StoreThemeSource.Official : null;
+        }
+
+        if (request.Name is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name))
+                throw new ValidationException("Name is required.");
+            item.Name = request.Name.Trim();
+        }
+
+        if (request.Description is not null)
+            item.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+
+        if (request.AssetUrl is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.AssetUrl))
+                throw new ValidationException("AssetUrl is required.");
+            item.AssetUrl = request.AssetUrl.Trim();
+        }
+
+        if (request.PreviewUrl is not null)
+            item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
+
+        if (request.ThemeStickerItemId != default)
+            item.ThemeStickerItemId = request.ThemeStickerItemId;
+
+        if (request.ThemeBackgroundItemId != default)
+            item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
+
+        if (request.ThemeEffectItemId != default)
+            item.ThemeEffectItemId = request.ThemeEffectItemId;
+
+        if (request.ThemeAmbientSoundItemId != default)
+            item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+
+        if (request.IsPremium is not null)
+            item.IsPremium = request.IsPremium.Value;
+
+        if (request.CoinPrice is not null)
+            item.CoinPrice = NormalizeCoinPrice(request.CoinPrice);
+
+        if (request.RealMoneyPriceVnd is not null)
+            item.RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd);
+
+        if (request.IsActive is not null)
+            item.IsActive = request.IsActive.Value;
+
         item.UpdatedAt = DateTime.UtcNow;
 
         ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
@@ -143,7 +211,8 @@ public class AdminStoreService : IAdminStoreService
     private static long? NormalizeMoneyPrice(long? price) =>
         price is null or <= 0 ? null : price;
 
-    public async Task<PagedResult<AdminStoreItemDto>> GetPendingThemesAsync(
+    public async Task<PagedResult<AdminStoreItemDto>> GetPendingSubmissionsAsync(
+        StoreCategory? category,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -151,8 +220,8 @@ public class AdminStoreService : IAdminStoreService
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        var total = await _storeRepository.CountPendingReviewAsync(cancellationToken);
-        var items = await _storeRepository.GetPendingReviewAsync(page, pageSize, cancellationToken);
+        var total = await _storeRepository.CountPendingReviewAsync(category, cancellationToken);
+        var items = await _storeRepository.GetPendingReviewAsync(category, page, pageSize, cancellationToken);
 
         return new PagedResult<AdminStoreItemDto>
         {
@@ -174,22 +243,33 @@ public class AdminStoreService : IAdminStoreService
         if (item.Status != Domain.Enums.StoreItemStatus.PendingReview)
             throw new ValidationException("Only items with status 'PendingReview' can be approved.");
 
+        if (item.Category != StoreCategory.Theme)
+            throw new ValidationException("Use the component approval endpoint for non-theme items.");
+
+        var now = DateTime.UtcNow;
         item.Status = Domain.Enums.StoreItemStatus.Approved;
         item.IsActive = true;
         item.ThemeSource = StoreThemeSource.Community;
         item.RejectionNote = null;
-        item.ReviewedAt = DateTime.UtcNow;
-        item.UpdatedAt = DateTime.UtcNow;
+        item.ReviewedAt = now;
+        item.UpdatedAt = now;
 
-        // Admin can optionally adjust pricing before approving
         if (request.CoinPrice is not null)
             item.CoinPrice = NormalizeCoinPrice(request.CoinPrice);
         if (request.RealMoneyPriceVnd is not null)
             item.RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd);
-
         item.IsPremium = request.IsPremium;
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        // Cascade-approve all inline components belonging to this Theme combo
+        var inlineComponents = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+        if (inlineComponents.Count > 0)
+        {
+            var inlineIds = inlineComponents.Select(x => x.Id).ToList();
+            await _storeRepository.BulkUpdateStatusAsync(inlineIds, Domain.Enums.StoreItemStatus.Approved, isActive: true, now, cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToAdminDto(item);
     }
@@ -208,11 +288,85 @@ public class AdminStoreService : IAdminStoreService
         if (item.Status != Domain.Enums.StoreItemStatus.PendingReview)
             throw new ValidationException("Only items with status 'PendingReview' can be rejected.");
 
+        if (item.Category != StoreCategory.Theme)
+            throw new ValidationException("Use the component rejection endpoint for non-theme items.");
+
+        var now = DateTime.UtcNow;
         item.Status = Domain.Enums.StoreItemStatus.Rejected;
         item.IsActive = false;
         item.RejectionNote = request.RejectionNote.Trim();
-        item.ReviewedAt = DateTime.UtcNow;
-        item.UpdatedAt = DateTime.UtcNow;
+        item.ReviewedAt = now;
+        item.UpdatedAt = now;
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        // Cascade-reject all inline components belonging to this Theme combo
+        var inlineComponents = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+        if (inlineComponents.Count > 0)
+        {
+            var inlineIds = inlineComponents.Select(x => x.Id).ToList();
+            await _storeRepository.BulkUpdateStatusAsync(inlineIds, Domain.Enums.StoreItemStatus.Rejected, isActive: false, now, cancellationToken);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToAdminDto(item);
+    }
+
+    public async Task<AdminStoreItemDto> ApprovePendingComponentAsync(
+        Guid id,
+        ApproveComponentRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _storeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Store item not found.");
+
+        if (item.Status != Domain.Enums.StoreItemStatus.PendingReview)
+            throw new ValidationException("Only items with status 'PendingReview' can be approved.");
+
+        if (item.Category == StoreCategory.Theme)
+            throw new ValidationException("Use the theme approval endpoint for Theme items.");
+
+        var now = DateTime.UtcNow;
+        item.Status = Domain.Enums.StoreItemStatus.Approved;
+        item.IsActive = true;
+        item.RejectionNote = null;
+        item.ReviewedAt = now;
+        item.UpdatedAt = now;
+
+        if (request.CoinPrice is not null)
+            item.CoinPrice = NormalizeCoinPrice(request.CoinPrice);
+        if (request.RealMoneyPriceVnd is not null)
+            item.RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd);
+        item.IsPremium = request.IsPremium;
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToAdminDto(item);
+    }
+
+    public async Task<AdminStoreItemDto> RejectPendingComponentAsync(
+        Guid id,
+        RejectThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.RejectionNote))
+            throw new ValidationException("Rejection note is required.");
+
+        var item = await _storeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Store item not found.");
+
+        if (item.Status != Domain.Enums.StoreItemStatus.PendingReview)
+            throw new ValidationException("Only items with status 'PendingReview' can be rejected.");
+
+        if (item.Category == StoreCategory.Theme)
+            throw new ValidationException("Use the theme rejection endpoint for Theme items.");
+
+        var now = DateTime.UtcNow;
+        item.Status = Domain.Enums.StoreItemStatus.Rejected;
+        item.IsActive = false;
+        item.RejectionNote = request.RejectionNote.Trim();
+        item.ReviewedAt = now;
+        item.UpdatedAt = now;
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -220,7 +374,7 @@ public class AdminStoreService : IAdminStoreService
     }
 
     private static AdminStoreItemDto ToAdminDto(StoreItem x) =>
-        new(x.Id, x.Category, x.ThemeSource, x.Name, x.Description, x.AssetUrl,
+        new(x.Id, x.Category, x.ThemeSource, x.Name, x.Description, x.AssetUrl, x.PreviewUrl,
             x.ThemeStickerItemId, x.ThemeBackgroundItemId, x.ThemeEffectItemId, x.ThemeAmbientSoundItemId,
             x.IsPremium,
             x.CoinPrice, x.RealMoneyPriceVnd, x.IsActive,
@@ -238,7 +392,10 @@ public class AdminStoreService : IAdminStoreService
         if (category != StoreCategory.Theme)
             return;
 
-        if (stickerItemId is null || backgroundItemId is null || effectItemId is null || ambientSoundItemId is null)
-            throw new ValidationException("Theme items must include sticker, background, effect, and ambient sound components.");
+        var provided = new[] { stickerItemId, backgroundItemId, effectItemId, ambientSoundItemId }
+            .Count(id => id is not null);
+
+        if (provided < 2)
+            throw new ValidationException("Theme items must include at least 2 different component types (sticker, background, effect, or ambient sound).");
     }
 }

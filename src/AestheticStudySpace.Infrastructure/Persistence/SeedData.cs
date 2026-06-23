@@ -48,13 +48,14 @@ public static class SeedData
 
         foreach (var role in roles)
         {
-            if (!await context.Roles.AnyAsync(r => r.Id == role.Id))
+            // IgnoreQueryFilters() so the soft-delete filter doesn't hide already-seeded rows
+            if (!await context.Roles.IgnoreQueryFilters().AnyAsync(r => r.Id == role.Id))
                 await context.Roles.AddAsync(role);
         }
 
         await context.SaveChangesAsync();
 
-        if (!await context.Users.AnyAsync(u => u.Id == AdminUserId))
+        if (!await context.Users.IgnoreQueryFilters().AnyAsync(u => u.Id == AdminUserId))
         {
             var adminRole = await context.Roles.FirstAsync(r => r.Id == AdminRoleId);
             var admin = new User
@@ -161,16 +162,17 @@ public static class SeedData
             new() { RoomId = neonLoft.Id, AssetId = lofiPremium.Id, DefaultLayerIndex = 1 }
         };
 
-        if (!await context.Rooms.AnyAsync())
+        // IgnoreQueryFilters() ensures soft-deleted rows are counted, preventing duplicate PK inserts
+        if (!await context.Rooms.IgnoreQueryFilters().AnyAsync())
             await context.Rooms.AddRangeAsync(cozyAttic, neonLoft);
 
-        if (!await context.Assets.AnyAsync())
+        if (!await context.Assets.IgnoreQueryFilters().AnyAsync())
             await context.Assets.AddRangeAsync(rain, cafe, whiteNoise, cat, lofiPremium);
 
-        if (!await context.RoomAssetMappings.AnyAsync())
+        if (!await context.RoomAssetMappings.IgnoreQueryFilters().AnyAsync())
             await context.RoomAssetMappings.AddRangeAsync(mappings);
 
-        if (!await context.StoreItems.AnyAsync())
+        if (!await context.StoreItems.IgnoreQueryFilters().AnyAsync())
         {
             await context.StoreItems.AddRangeAsync(
                 new StoreItem
@@ -257,7 +259,7 @@ public static class SeedData
                 });
         }
 
-        if (!await context.Missions.AnyAsync())
+        if (!await context.Missions.IgnoreQueryFilters().AnyAsync())
         {
             await context.Missions.AddRangeAsync(
                 new Mission

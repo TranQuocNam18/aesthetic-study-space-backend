@@ -35,5 +35,21 @@ public class AdminAnalyticsController : ControllerBase
         var result = await _adminService.GetFeatureUsageAsync(cancellationToken);
         return Ok(ApiResponse<AdminFeatureUsageDto>.Ok(result));
     }
+
+    /// <summary>Tổng doanh thu phân loại theo loại thanh toán (Subscription, CoinPack, Asset).</summary>
+    [HttpGet("revenue")]
+    public async Task<ActionResult<ApiResponse<AdminRevenueSummaryDto>>> Revenue(CancellationToken cancellationToken = default)
+    {
+        var result = await _adminService.GetRevenueSummaryAsync(cancellationToken);
+        return Ok(ApiResponse<AdminRevenueSummaryDto>.Ok(result));
+    }
+
+    /// <summary>Doanh thu theo từng ngày trong khoảng `days` ngày gần nhất (mặc định 30 ngày, tối đa 365).</summary>
+    [HttpGet("revenue-trend")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<AdminRevenueTrendDto>>>> RevenueTrend([FromQuery] int days = 30, CancellationToken cancellationToken = default)
+    {
+        var result = await _adminService.GetRevenueTrendAsync(days, cancellationToken);
+        return Ok(ApiResponse<IReadOnlyList<AdminRevenueTrendDto>>.Ok(result));
+    }
 }
 

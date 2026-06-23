@@ -71,4 +71,30 @@ public class UserThemeController : ControllerBase
         await _userThemeService.WithdrawSubmissionAsync(User.GetUserId(), id, cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { }, "Theme submission withdrawn."));
     }
+
+    /// <summary>
+    /// Update an existing theme submission (PUT).
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<UserThemeSubmissionDto>>> UpdateTheme(
+        Guid id,
+        [FromBody] SubmitThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _userThemeService.UpdateThemeAsync(User.GetUserId(), id, request, cancellationToken);
+        return Ok(ApiResponse<UserThemeSubmissionDto>.Ok(result, "Theme updated successfully."));
+    }
+
+    /// <summary>
+    /// Partially update an existing theme submission (PATCH).
+    /// </summary>
+    [HttpPatch("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<UserThemeSubmissionDto>>> PatchTheme(
+        Guid id,
+        [FromBody] PatchThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _userThemeService.PatchThemeAsync(User.GetUserId(), id, request, cancellationToken);
+        return Ok(ApiResponse<UserThemeSubmissionDto>.Ok(result, "Theme updated successfully."));
+    }
 }

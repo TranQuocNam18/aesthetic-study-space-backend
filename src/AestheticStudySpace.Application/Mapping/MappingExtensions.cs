@@ -25,6 +25,7 @@ public static class MappingExtensions
             mapping.Asset.Url,
             mapping.Asset.DefaultVolume,
             mapping.Asset.IsPremium,
+            mapping.Asset.PreviewUrl,
             mapping.DefaultPositionX,
             mapping.DefaultPositionY,
             mapping.DefaultScale,
@@ -42,7 +43,7 @@ public static class MappingExtensions
             mappings.Select(m => m.ToRoomAssetDto()).ToList());
 
     public static AssetDto ToDto(this Asset asset) =>
-        new(asset.Id, asset.Name, asset.Description, asset.Url, asset.AssetType.ToString(), asset.Category.ToString(), asset.DefaultVolume, asset.IsPremium);
+        new(asset.Id, asset.Name, asset.Description, asset.Url, asset.AssetType.ToString(), asset.Category.ToString(), asset.DefaultVolume, asset.IsPremium, asset.PreviewUrl);
 
     public static TodoDto ToDto(this Todo todo) =>
         new(todo.Id, todo.Content, todo.IsCompleted, todo.CreatedAt);

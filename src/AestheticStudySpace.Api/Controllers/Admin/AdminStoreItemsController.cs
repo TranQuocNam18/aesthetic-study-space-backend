@@ -61,6 +61,17 @@ public class AdminStoreItemsController : ControllerBase
         return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Store item updated."));
     }
 
+    /// <summary>Partially update an existing store item.</summary>
+    [HttpPatch("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> Patch(
+        Guid id,
+        [FromBody] PatchStoreItemRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.PatchAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Store item updated."));
+    }
+
     /// <summary>Soft-delete (deactivate) a store item.</summary>
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult<ApiResponse<object>>> Delete(Guid id, CancellationToken cancellationToken = default)
@@ -69,25 +80,21 @@ public class AdminStoreItemsController : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { }, "Store item deactivated."));
     }
 
-    // ── User-submitted theme review workflow ──────────────────────────────────
 
-    /// <summary>
-    /// List user-submitted themes that are waiting for admin review (status = PendingReview).
-    /// Sorted oldest-first (FIFO queue).
-    /// </summary>
+
     [HttpGet("pending")]
-    public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPendingThemes(
+    public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPendingSubmissions(
+        [FromQuery] StoreCategory? category = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _adminStoreService.GetPendingThemesAsync(page, pageSize, cancellationToken);
+        var result = await _adminStoreService.GetPendingSubmissionsAsync(category, page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResult<AdminStoreItemDto>>.Ok(result));
     }
 
     /// <summary>
-    /// Approve a user-submitted theme. Sets status to Approved and makes it visible in the store.
-    /// Admin can optionally adjust pricing before approving.
+    /// Approve a user-submitted Theme.
     /// </summary>
     [HttpPost("{id:guid}/approve")]
     public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> ApproveTheme(
@@ -100,7 +107,7 @@ public class AdminStoreItemsController : ControllerBase
     }
 
     /// <summary>
-    /// Reject a user-submitted theme. Sets status to Rejected, item stays hidden.
+    /// Reject a user-submitted Theme combo.
     /// A rejection note explaining the reason is required.
     /// </summary>
     [HttpPost("{id:guid}/reject")]
@@ -111,5 +118,33 @@ public class AdminStoreItemsController : ControllerBase
     {
         var item = await _adminStoreService.RejectPendingThemeAsync(id, request, cancellationToken);
         return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Theme rejected."));
+    }
+
+    /// <summary>
+    /// Approve a user-submitted standalone component (Sticker / Background / Effect / AmbientSound).
+    /// Admin can optionally adjust pricing before approving.
+    /// </summary>
+    [HttpPost("{id:guid}/approve-component")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> ApproveComponent(
+        Guid id,
+        [FromBody] ApproveComponentRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.ApprovePendingComponentAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Component approved and is now visible in the store."));
+    }
+
+    /// <summary>
+    /// Reject a user-submitted standalone component (Sticker / Background / Effect / AmbientSound).
+    /// Sets status to Rejected, item stays hidden. A rejection note is required.
+    /// </summary>
+    [HttpPost("{id:guid}/reject-component")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> RejectComponent(
+        Guid id,
+        [FromBody] RejectThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.RejectPendingComponentAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Component rejected."));
     }
 }

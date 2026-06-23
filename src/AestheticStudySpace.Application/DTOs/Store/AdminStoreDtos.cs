@@ -9,6 +9,7 @@ public record AdminStoreItemDto(
     string Name,
     string? Description,
     string AssetUrl,
+    string? PreviewUrl,
     Guid? ThemeStickerItemId,
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,
@@ -31,13 +32,14 @@ public record CreateStoreItemRequestDto(
     string Name,
     string? Description,
     string AssetUrl,
+    string? PreviewUrl,
     Guid? ThemeStickerItemId,
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,
     Guid? ThemeAmbientSoundItemId,
-    bool IsPremium,
-    int? CoinPrice,
-    long? RealMoneyPriceVnd,
+    bool IsPremium = true,
+    int? CoinPrice = null,
+    long? RealMoneyPriceVnd = null,
     bool IsActive = true);
 
 public record UpdateStoreItemRequestDto(
@@ -46,6 +48,7 @@ public record UpdateStoreItemRequestDto(
     string Name,
     string? Description,
     string AssetUrl,
+    string? PreviewUrl,
     Guid? ThemeStickerItemId,
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,
@@ -60,4 +63,27 @@ public record ApproveThemeRequestDto(
     long? RealMoneyPriceVnd,
     bool IsPremium = false);
 
+/// <summary>Admin approval DTO for standalone components (Sticker / Background / Effect / AmbientSound).</summary>
+public record ApproveComponentRequestDto(
+    int? CoinPrice,
+    long? RealMoneyPriceVnd,
+    bool IsPremium = false);
+
 public record RejectThemeRequestDto(string RejectionNote);
+
+public record PatchStoreItemRequestDto(
+    StoreCategory? Category = null,
+    StoreThemeSource? ThemeSource = null,
+    string? Name = null,
+    string? Description = null,
+    string? AssetUrl = null,
+    string? PreviewUrl = null,
+    Guid? ThemeStickerItemId = null,
+    Guid? ThemeBackgroundItemId = null,
+    Guid? ThemeEffectItemId = null,
+    Guid? ThemeAmbientSoundItemId = null,
+    bool? IsPremium = null,
+    int? CoinPrice = null,
+    long? RealMoneyPriceVnd = null,
+    bool? IsActive = null);
+

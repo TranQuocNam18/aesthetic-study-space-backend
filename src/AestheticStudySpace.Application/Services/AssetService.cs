@@ -52,7 +52,8 @@ public class AssetService : IAssetService
             AssetType = MappingExtensions.ParseAssetType(request.Type),
             Category = MappingExtensions.ParseAssetCategory(request.Category),
             DefaultVolume = Math.Clamp(request.DefaultVolume, 0, 100),
-            IsPremium = request.IsPremium
+            IsPremium = request.IsPremium,
+            PreviewUrl = request.PreviewUrl?.Trim()
         };
 
         await _assetRepository.AddAsync(asset, cancellationToken);
@@ -72,6 +73,7 @@ public class AssetService : IAssetService
         asset.Category = MappingExtensions.ParseAssetCategory(request.Category);
         asset.DefaultVolume = Math.Clamp(request.DefaultVolume, 0, 100);
         asset.IsPremium = request.IsPremium;
+        asset.PreviewUrl = request.PreviewUrl?.Trim();
 
         await _assetRepository.UpdateAsync(asset, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

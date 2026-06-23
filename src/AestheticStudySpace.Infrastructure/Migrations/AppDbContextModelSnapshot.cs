@@ -131,6 +131,10 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<string>("PreviewUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -587,6 +591,75 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AestheticStudySpace.Domain.Entities.Report", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Feedback");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Reports", (string)null);
+                });
+
             modelBuilder.Entity("AestheticStudySpace.Domain.Entities.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -917,6 +990,13 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<Guid?>("ParentThemeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PreviewUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
                     b.Property<long?>("RealMoneyPriceVnd")
                         .HasColumnType("bigint");
 
@@ -965,6 +1045,8 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                     b.HasIndex("IsActive");
 
                     b.HasIndex("IsPremium");
+
+                    b.HasIndex("ParentThemeId");
 
                     b.HasIndex("Status");
 
@@ -1414,6 +1496,17 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AestheticStudySpace.Domain.Entities.Report", b =>
+                {
+                    b.HasOne("AestheticStudySpace.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("AestheticStudySpace.Domain.Entities.Room", b =>
                 {
                     b.HasOne("AestheticStudySpace.Domain.Entities.User", "Owner")
@@ -1479,7 +1572,14 @@ namespace AestheticStudySpace.Infrastructure.Migrations
                         .HasForeignKey("CreatorId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("AestheticStudySpace.Domain.Entities.StoreItem", "ParentTheme")
+                        .WithMany()
+                        .HasForeignKey("ParentThemeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Creator");
+
+                    b.Navigation("ParentTheme");
                 });
 
             modelBuilder.Entity("AestheticStudySpace.Domain.Entities.Subscription", b =>

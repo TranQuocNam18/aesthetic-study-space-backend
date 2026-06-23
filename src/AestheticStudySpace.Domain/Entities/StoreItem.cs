@@ -11,6 +11,11 @@ public class StoreItem : BaseEntity
     public string? Description { get; set; }
 
     public string AssetUrl { get; set; } = string.Empty;
+    /// <summary>
+    /// Optional preview URL (image or video) shown to users before purchase.
+    /// For Effect items this should be a short video clip URL.
+    /// </summary>
+    public string? PreviewUrl { get; set; }
     public Guid? ThemeStickerItemId { get; set; }
     public Guid? ThemeBackgroundItemId { get; set; }
     public Guid? ThemeEffectItemId { get; set; }
@@ -40,5 +45,13 @@ public class StoreItem : BaseEntity
 
     /// <summary>When Admin reviewed (approved or rejected) this submission.</summary>
     public DateTime? ReviewedAt { get; set; }
+
+    /// <summary>
+    /// When a user submits a "mixed" Theme combo that includes self-uploaded components
+    /// (i.e. components not yet in the store), this points to the parent Theme StoreItem.
+    /// Null for standalone items (admin-created, or user-submitted components submitted independently).
+    /// </summary>
+    public Guid? ParentThemeId { get; set; }
+    public StoreItem? ParentTheme { get; set; }
 }
 

@@ -19,4 +19,14 @@ public interface IUserThemeService
     /// Soft-deletes the item.
     /// </summary>
     Task WithdrawSubmissionAsync(Guid userId, Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Update a theme submission (PUT).
+    /// </summary>
+    Task<UserThemeSubmissionDto> UpdateThemeAsync(Guid userId, Guid id, SubmitThemeRequestDto request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Partially update a theme submission (PATCH).
+    /// </summary>
+    Task<UserThemeSubmissionDto> PatchThemeAsync(Guid userId, Guid id, PatchThemeRequestDto request, CancellationToken cancellationToken = default);
 }

@@ -57,5 +57,40 @@ public class AdminAnalyticsRepository : IAdminAnalyticsRepository
         var roomsVisited = await _context.ActivityLogs.CountAsync(a => a.Action == "room_visit", cancellationToken);
         return new AdminFeatureUsageDto(pomodoro, todosCompleted, roomsVisited, paymentsSucceeded);
     }
+
+    public async Task<AdminRevenueSummaryDto> GetRevenueSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        var groups = await _context.PaymentTransactions
+            .AsNoTracking()
+            .Where(t => t.Status == PaymentStatus.Succeeded)
+            .GroupBy(t => t.Purpose)
+            .Select(g => new { Purpose = g.Key, Total = g.Sum(t => (long)t.Amount), Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        long subscriptionRevenue = groups.FirstOrDefault(g => g.Purpose == PaymentPurpose.Subscription)?.Total ?? 0;
+        long coinPackRevenue     = groups.FirstOrDefault(g => g.Purpose == PaymentPurpose.BuyCoins)?.Total ?? 0;
+        long assetRevenue        = groups.FirstOrDefault(g => g.Purpose == PaymentPurpose.BuyAsset)?.Total ?? 0;
+        int  totalTransactions   = groups.Sum(g => g.Count);
+        long totalRevenue        = subscriptionRevenue + coinPackRevenue + assetRevenue;
+
+        return new AdminRevenueSummaryDto(totalRevenue, subscriptionRevenue, coinPackRevenue, assetRevenue, totalTransactions);
+    }
+
+    public async Task<IReadOnlyList<AdminRevenueTrendDto>> GetRevenueTrendAsync(int days, CancellationToken cancellationToken = default)
+    {
+        days = days switch { <= 0 => 7, > 365 => 365, _ => days };
+        var from = DateTime.UtcNow.Date.AddDays(-days + 1);
+        var to   = DateTime.UtcNow.AddDays(1).Date;
+
+        var data = await _context.PaymentTransactions
+            .AsNoTracking()
+            .Where(t => t.Status == PaymentStatus.Succeeded && t.SucceededAt >= from && t.SucceededAt < to)
+            .GroupBy(t => t.SucceededAt!.Value.Date)
+            .Select(g => new { Date = g.Key, AmountVnd = g.Sum(t => (long)t.Amount), Transactions = g.Count() })
+            .OrderBy(x => x.Date)
+            .ToListAsync(cancellationToken);
+
+        return data.Select(x => new AdminRevenueTrendDto(DateOnly.FromDateTime(x.Date), x.AmountVnd, x.Transactions)).ToList();
+    }
 }
 

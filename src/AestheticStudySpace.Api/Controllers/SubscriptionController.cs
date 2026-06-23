@@ -23,5 +23,14 @@ public class SubscriptionController : ControllerBase
         var result = await _subscriptionService.UpgradeAsync(userId, request, cancellationToken);
         return ApiResponse<object>.Ok(result);
     }
+
+    [HttpPost("trial")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<object>>> ActivateTrial(CancellationToken cancellationToken = default)
+    {
+        var userId = User.GetUserId();
+        var result = await _subscriptionService.ActivateTrialAsync(userId, cancellationToken);
+        return ApiResponse<object>.Ok(result, "Trial subscription activated successfully.");
+    }
 }
 

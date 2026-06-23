@@ -7,5 +7,7 @@ public interface IAdminAnalyticsRepository
     Task<AdminOverviewDto> GetOverviewAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AdminDateCountDto>> GetUserGrowthAsync(int days, CancellationToken cancellationToken = default);
     Task<AdminFeatureUsageDto> GetFeatureUsageAsync(CancellationToken cancellationToken = default);
+    Task<AdminRevenueSummaryDto> GetRevenueSummaryAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AdminRevenueTrendDto>> GetRevenueTrendAsync(int days, CancellationToken cancellationToken = default);
 }
 
