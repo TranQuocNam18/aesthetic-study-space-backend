@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using PayOS;
 
 namespace AestheticStudySpace.Infrastructure;
 
@@ -25,6 +26,14 @@ public static class DependencyInjection
         services.Configure<ResendSettings>(configuration.GetSection(ResendSettings.SectionName));
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
         services.Configure<VnPaySettings>(configuration.GetSection(VnPaySettings.SectionName));
+        services.Configure<PayOsSettings>(configuration.GetSection(PayOsSettings.SectionName));
+
+        // PayOS SDK client (singleton — thread-safe)
+        var payOsSection = configuration.GetSection(PayOsSettings.SectionName);
+        services.AddSingleton(_ => new PayOSClient(
+            payOsSection["ClientId"]    ?? string.Empty,
+            payOsSection["ApiKey"]      ?? string.Empty,
+            payOsSection["ChecksumKey"] ?? string.Empty));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
