@@ -109,84 +109,170 @@ public class RetentionEmailService : IRetentionEmailService
         <html>
         <head>
             <meta charset='utf-8'>
-            <title>Chúng tôi nhớ bạn!</title>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <title>Góc học tập đang đợi bạn!</title>
             <style>
                 body {{
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background-color: #f7f9fc;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    background-color: #0C0F0F;
                     margin: 0;
                     padding: 0;
-                    color: #333333;
+                    color: #FFFFFF;
+                    -webkit-font-smoothing: antialiased;
+                }}
+                .wrapper {{
+                    background-color: #0C0F0F;
+                    padding: 40px 20px;
                 }}
                 .container {{
-                    max-width: 600px;
-                    margin: 40px auto;
-                    background: #ffffff;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+                    max-width: 550px;
+                    margin: 0 auto;
+                    background: #161B1B;
+                    border-radius: 16px;
                     overflow: hidden;
+                    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+                    border: 1px solid #232A2A;
                 }}
                 .header {{
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    padding: 40px 20px;
+                    padding: 44px 40px 20px 40px;
                     text-align: center;
-                    color: #ffffff;
+                }}
+                .logo {{
+                    font-size: 13px;
+                    font-weight: 700;
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                    color: #00F0C2;
+                    margin-bottom: 24px;
+                    display: inline-block;
+                    background: rgba(0, 240, 194, 0.1);
+                    padding: 6px 16px;
+                    border-radius: 30px;
                 }}
                 .header h1 {{
                     margin: 0;
                     font-size: 26px;
-                    font-weight: 600;
+                    font-weight: 800;
+                    line-height: 1.35;
+                    color: #FFFFFF;
                 }}
                 .content {{
-                    padding: 30px;
+                    padding: 0 40px 44px 40px;
+                }}
+                .intro-text {{
+                    font-size: 15px;
                     line-height: 1.6;
+                    color: #A2AAAA;
+                    text-align: center;
+                    margin-bottom: 32px;
                 }}
-                .content p {{
-                    font-size: 16px;
-                    margin-bottom: 20px;
+                .highlight {{
+                    color: #00F0C2;
+                    font-weight: 600;
                 }}
+                
+                /* Gợi ý tính năng kiểu Spotify Dashboard */
+                .feature-box {{
+                    background: #1E2424;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-bottom: 32px;
+                    border: 1px solid #2A3333;
+                }}
+                .feature-title {{
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    color: #00F0C2;
+                    margin: 0 0 16px 0;
+                    font-weight: 700;
+                    text-align: center;
+                }}
+                .feature-item {{
+                    display: flex;
+                    align-items: center;
+                    padding: 10px 0;
+                    border-bottom: 1px solid #2A3333;
+                    font-size: 14px;
+                    color: #E2E8E8;
+                }}
+                .feature-item:last-child {{
+                    border-bottom: none;
+                }}
+                .feature-emoji {{
+                    margin-right: 14px;
+                    font-size: 18px;
+                }}
+                
+                /* Button phong cách Spotify pill-shape */
                 .btn-container {{
                     text-align: center;
-                    margin: 30px 0;
+                    margin: 32px 0 16px 0;
                 }}
                 .btn {{
-                    background: #764ba2;
-                    color: #ffffff !important;
+                    background: #00F0C2;
+                    color: #0C0F0F !important;
                     text-decoration: none;
-                    padding: 12px 30px;
-                    font-weight: bold;
-                    border-radius: 30px;
+                    padding: 16px 44px;
+                    font-weight: 700;
+                    font-size: 15px;
+                    border-radius: 50px;
                     display: inline-block;
-                    box-shadow: 0 4px 6px rgba(118, 75, 162, 0.2);
+                    letter-spacing: 0.5px;
+                    box-shadow: 0 4px 20px rgba(0, 240, 194, 0.3);
                 }}
+                
                 .footer {{
-                    background-color: #f1f3f7;
+                    background-color: #0C0F0F;
                     text-align: center;
-                    padding: 20px;
-                    font-size: 13px;
-                    color: #777777;
-                    border-top: 1px solid #e9ecef;
+                    padding: 32px 40px;
+                    font-size: 12px;
+                    color: #626A6A;
+                    line-height: 1.6;
+                    border-top: 1px solid #161B1B;
+                }}
+                .footer a {{
+                    color: #A2AAAA;
+                    text-decoration: underline;
                 }}
             </style>
         </head>
         <body>
-            <div class='container'>
-                <div class='header'>
-                    <h1>Aesthetic Study Space</h1>
-                </div>
-                <div class='content'>
-                    <p>Chào <strong>{username}</strong>,</p>
-                    <p>Đã 7 ngày rồi chúng tôi không thấy bạn ghé thăm không gian học tập của mình. Những bản nhạc lofi êm dịu, âm thanh mưa rơi và góc làm việc ảo yêu thích của bạn vẫn đang chờ bạn đấy!</p>
-                    <p>Hãy dành ra một khoảng thời gian nhỏ hôm nay để ngồi vào bàn học, bật Pomodoro và hoàn thành những mục tiêu còn dang dở nhé.</p>
-                    <div class='btn-container'>
-                        <a href='https://www.aestheticspace.live' class='btn'>Quay lại học tập ngay</a>
+            <div class='wrapper'>
+                <div class='container'>
+                    <div class='header'>
+                        <div class='logo'>🎧 AESTHETIC STUDY SPACE</div>
+                        <h1>Đã 7 ngày rồi, bàn học của bạn đang trống...</h1>
                     </div>
-                    <p>Chúc bạn một ngày học tập và làm việc thật hiệu quả!</p>
-                    <p>Thân mến,<br>Đội ngũ Aesthetic Study Space</p>
-                </div>
-                <div class='footer'>
-                    <p>Bạn nhận được email này vì đã đăng ký tài khoản trên Aesthetic Study Space.</p>
-                    <p>&copy; {DateTime.UtcNow.Year} Aesthetic Study Space. All rights reserved.</p>
+                    <div class='content'>
+                        <p class='intro-text'>
+                            Chào <strong style='color: #FFFFFF;'>{username}</strong>, không gian ảo của bạn đang hơi yên ắng thiếu đi tiếng lật sách và những bước chân hoàn thành mục tiêu. Hãy quay lại kích hoạt năng lượng tích cực nào!
+                        </p>
+                        
+                        <div class='feature-box'>
+                            <p class='feature-title'>Mở lại không gian của bạn</p>
+                            <div class='feature-item'>
+                                <span class='feature-emoji'>🎵</span> 
+                                <span>Các playlist Lo-fi Chill mới nhất vừa được cập nhật.</span>
+                            </div>
+                            <div class='feature-item'>
+                                <span class='feature-emoji'>⏱️</span> 
+                                <span>Đồng hồ Pomodoro sẵn sàng cho phiên tập trung mới.</span>
+                            </div>
+                            <div class='feature-item'>
+                                <span class='feature-emoji'>🌧️</span> 
+                                <span>Âm thanh nền mưa rơi và tiếng quán cafe quen thuộc.</span>
+                            </div>
+                        </div>
+
+                        <div class='btn-container'>
+                            <a href='https://www.aestheticspace.live' class='btn'>Vào Bàn Học Ngay</a>
+                        </div>
+                    </div>
+                    <div class='footer'>
+                        <p>Bạn nhận được email này vì bạn là thành viên của cộng đồng Aesthetic Study Space.</p>
+                        <p>&copy; {DateTime.UtcNow.Year} Aesthetic Study Space. All rights reserved.</p>
+                    </div>
                 </div>
             </div>
         </body>
