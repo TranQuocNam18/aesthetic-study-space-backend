@@ -62,6 +62,7 @@ public record PurchaseHistoryItemDto(
     string Currency,
     PaymentProvider? PaymentProvider,
     string? TransactionCode,
+    PaymentStatus? Status,
     Guid? StoreItemId,
     StoreCategory? StoreCategory,
     StoreThemeSource? ThemeSource,

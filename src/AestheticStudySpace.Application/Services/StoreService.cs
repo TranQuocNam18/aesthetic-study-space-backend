@@ -146,6 +146,9 @@ public class StoreService : IStoreService
     public async Task<PagedResult<PurchaseHistoryItemDto>> GetPurchaseHistoryAsync(
         Guid userId,
         PurchaseHistoryKind? kind,
+        PaymentStatus? status,
+        DateTime? fromDate,
+        DateTime? toDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -178,9 +181,18 @@ public class StoreService : IStoreService
             .Cast<PurchaseHistoryItemDto>()
             .ToList();
 
-        // Apply kind filter (in-memory, after projection so Kind is resolved)
+        // Apply filters in-memory
         if (kind is not null)
             allItems = allItems.Where(x => x.Kind == kind.Value).ToList();
+
+        if (status is not null)
+            allItems = allItems.Where(x => x.Status == status.Value).ToList();
+
+        if (fromDate is not null)
+            allItems = allItems.Where(x => x.PurchasedAt >= fromDate.Value).ToList();
+
+        if (toDate is not null)
+            allItems = allItems.Where(x => x.PurchasedAt <= toDate.Value).ToList();
 
         var total = allItems.Count;
         var items = allItems.Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -232,6 +244,7 @@ public class StoreService : IStoreService
                 purchase.Currency,
                 payment?.Provider,
                 payment?.TransactionCode,
+                payment?.Status ?? PaymentStatus.Succeeded,
                 item.Id,
                 item.Category,
                 item.ThemeSource,
@@ -255,6 +268,7 @@ public class StoreService : IStoreService
                 purchase.Currency,
                 payment.Provider,
                 payment.TransactionCode,
+                payment.Status,
                 null,
                 null,
                 null,
@@ -276,6 +290,7 @@ public class StoreService : IStoreService
             purchase.Currency,
             payment?.Provider,
             payment?.TransactionCode,
+            payment?.Status ?? PaymentStatus.Succeeded,
             null,
             null,
             null,
@@ -287,17 +302,43 @@ public class StoreService : IStoreService
             purchase.CreatedAt);
     }
 
-    private static PurchaseHistoryItemDto ToHistoryDto(PaymentTransaction payment) =>
-        new(
+    private static PurchaseHistoryItemDto ToHistoryDto(PaymentTransaction payment)
+    {
+        var kind = payment.Purpose switch
+        {
+            PaymentPurpose.Subscription => PurchaseHistoryKind.Subscription,
+            PaymentPurpose.BuyCoins => PurchaseHistoryKind.CoinPack,
+            PaymentPurpose.BuyAsset => PurchaseHistoryKind.StoreItem,
+            _ => PurchaseHistoryKind.Subscription
+        };
+
+        var title = payment.Purpose switch
+        {
+            PaymentPurpose.Subscription => "Premium Subscription",
+            PaymentPurpose.BuyCoins => "Coin Pack",
+            PaymentPurpose.BuyAsset => "Store Item",
+            _ => "Payment Transaction"
+        };
+
+        var description = payment.Purpose switch
+        {
+            PaymentPurpose.Subscription => "30-day Premium access",
+            PaymentPurpose.BuyCoins => "Coin pack purchase",
+            PaymentPurpose.BuyAsset => "Direct asset purchase",
+            _ => null
+        };
+
+        return new PurchaseHistoryItemDto(
             payment.Id,
-            PurchaseHistoryKind.Subscription,
-            "Premium Subscription",
-            "30-day Premium access",
+            kind,
+            title,
+            description,
             null,
             payment.Amount,
             payment.Currency,
             payment.Provider,
             payment.TransactionCode,
+            payment.Status,
             null,
             null,
             null,
@@ -307,6 +348,7 @@ public class StoreService : IStoreService
             null,
             null,
             payment.SucceededAt ?? payment.CreatedAt);
+    }
 
     private static StoreItemDto ToDto(StoreItem x, HashSet<Guid>? ownedIds) =>
         new(

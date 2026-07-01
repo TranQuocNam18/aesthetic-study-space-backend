@@ -140,8 +140,6 @@ public class StoreRepository : IStoreRepository
             .Where(x =>
                 x.UserId == userId &&
                 !x.IsDeleted &&
-                x.Purpose == PaymentPurpose.Subscription &&
-                x.Status == PaymentStatus.Succeeded &&
                 !_context.Purchases.Any(p => p.PaymentTransactionId == x.Id && !p.IsDeleted))
             .Select(x => new { x.Id, x.CreatedAt })
             .ToListAsync(cancellationToken);
@@ -182,9 +180,7 @@ public class StoreRepository : IStoreRepository
             .Where(x =>
                 x.UserId == userId &&
                 paymentIds.Contains(x.Id) &&
-                !x.IsDeleted &&
-                x.Purpose == PaymentPurpose.Subscription &&
-                x.Status == PaymentStatus.Succeeded)
+                !x.IsDeleted)
             .ToListAsync(cancellationToken);
     }
 

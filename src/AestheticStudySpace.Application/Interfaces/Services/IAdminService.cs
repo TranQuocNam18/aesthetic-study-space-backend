@@ -1,5 +1,6 @@
 using AestheticStudySpace.Application.Common;
 using AestheticStudySpace.Application.DTOs.Admin;
+using AestheticStudySpace.Domain.Enums;
 
 namespace AestheticStudySpace.Application.Interfaces.Services;
 
@@ -17,5 +18,20 @@ public interface IAdminService
     Task<AdminFeatureUsageDto> GetFeatureUsageAsync(CancellationToken cancellationToken = default);
     Task<AdminRevenueSummaryDto> GetRevenueSummaryAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AdminRevenueTrendDto>> GetRevenueTrendAsync(int days, CancellationToken cancellationToken = default);
+
+    Task<PagedResult<AdminPaymentTransactionDto>> GetPaymentsAsync(
+        string? search,
+        PaymentProvider? provider,
+        PaymentStatus? status,
+        PaymentPurpose? purpose,
+        DateTime? fromDate,
+        DateTime? toDate,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<AdminPaymentTransactionDto> GetPaymentByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task ManualFulfillPaymentAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
