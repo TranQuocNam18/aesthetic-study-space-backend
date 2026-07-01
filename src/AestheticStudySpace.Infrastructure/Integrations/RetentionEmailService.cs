@@ -77,6 +77,31 @@ public class RetentionEmailService : IRetentionEmailService
         return successfullySent;
     }
 
+    public async Task<bool> SendRetentionEmailToUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user == null)
+        {
+            _logger.LogWarning("User with ID {UserId} not found for manual retention email test.", userId);
+            return false;
+        }
+
+        var emailBody = GetRetentionEmailHtml(user.Username);
+        
+        await _emailSender.SendAsync(
+            user.Email,
+            "Góc học tập Aesthetic Study Space đang đợi bạn! 🎧📚 (Test)",
+            emailBody,
+            cancellationToken
+        );
+
+        user.LastRetentionEmailSentAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Successfully sent manual test retention email to {Username} ({Email})", user.Username, user.Email);
+        return true;
+    }
+
     private string GetRetentionEmailHtml(string username)
     {
         return $@"

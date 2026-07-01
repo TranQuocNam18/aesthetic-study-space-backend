@@ -78,5 +78,19 @@ public class AdminUsersController : ControllerBase
         var sentCount = await _retentionEmailService.SendRetentionEmailsAsync(cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { sentCount, message = $"Successfully triggered retention emails. Sent count: {sentCount}" }));
     }
+
+    /// <summary>
+    /// Kích hoạt gửi email nhắc nhở test cho một người dùng cụ thể ngay lập tức.
+    /// </summary>
+    [HttpPost("trigger-retention-email/{userId:guid}")]
+    public async Task<ActionResult<ApiResponse<object>>> TriggerRetentionEmailForUser([FromRoute] Guid userId, CancellationToken cancellationToken = default)
+    {
+        var success = await _retentionEmailService.SendRetentionEmailToUserAsync(userId, cancellationToken);
+        if (!success)
+        {
+            return NotFound(ApiResponse<object>.Fail("User not found."));
+        }
+        return Ok(ApiResponse<object>.Ok(new { success = true, message = "Successfully sent manual test email." }));
+    }
 }
 
