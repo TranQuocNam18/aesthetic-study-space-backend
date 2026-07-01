@@ -12,8 +12,13 @@ namespace AestheticStudySpace.Api.Controllers.Admin;
 public class AdminUsersController : ControllerBase
 {
     private readonly IAdminService _adminService;
+    private readonly IRetentionEmailService _retentionEmailService;
 
-    public AdminUsersController(IAdminService adminService) => _adminService = adminService;
+    public AdminUsersController(IAdminService adminService, IRetentionEmailService retentionEmailService)
+    {
+        _adminService = adminService;
+        _retentionEmailService = retentionEmailService;
+    }
 
     [HttpGet]
     public async Task<ActionResult<ApiResponse<PagedResult<AdminUserDto>>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
@@ -62,6 +67,16 @@ public class AdminUsersController : ControllerBase
     {
         var result = await _adminService.UpdateUserTierAsync(id, request.Tier, cancellationToken);
         return Ok(ApiResponse<AdminUserDto>.Ok(result));
+    }
+
+    /// <summary>
+    /// Kích hoạt gửi email nhắc nhở cho tất cả các user không hoạt động trên 7 ngày ngay lập tức.
+    /// </summary>
+    [HttpPost("trigger-retention-emails")]
+    public async Task<ActionResult<ApiResponse<object>>> TriggerRetentionEmails(CancellationToken cancellationToken = default)
+    {
+        var sentCount = await _retentionEmailService.SendRetentionEmailsAsync(cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { sentCount, message = $"Successfully triggered retention emails. Sent count: {sentCount}" }));
     }
 }
 

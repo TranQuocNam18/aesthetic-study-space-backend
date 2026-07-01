@@ -82,6 +82,9 @@ public static class DependencyInjection
         services.AddHttpClient<GeminiService>();
         services.AddScoped<IAiService, GeminiService>();
 
+        // Retention Email Service
+        services.AddScoped<IRetentionEmailService, RetentionEmailService>();
+
         var jwt = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are not configured.");
 
@@ -117,6 +120,7 @@ public static class DependencyInjection
         services.AddAuthorization();
         services.AddHostedService<MissionResetWorker>();
         services.AddHostedService<SubscriptionExpirationWorker>();
+        services.AddHostedService<RetentionEmailWorker>();
 
         return services;
     }
