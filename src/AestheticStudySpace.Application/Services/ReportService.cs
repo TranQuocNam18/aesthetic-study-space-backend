@@ -4,6 +4,7 @@ using AestheticStudySpace.Application.Interfaces.Repositories;
 using AestheticStudySpace.Application.Interfaces.Services;
 using AestheticStudySpace.Domain.Entities;
 using AestheticStudySpace.Domain.Exceptions;
+using Microsoft.Extensions.Configuration;
 
 namespace AestheticStudySpace.Application.Services;
 
@@ -16,19 +17,22 @@ public class ReportService : IReportService
     private readonly IEmailSender _emailSender;
     private readonly IReportRepository _reportRepository;
     private readonly IMediaStorageService _mediaStorageService;
+    private readonly string _backendBaseUrl;
 
     public ReportService(
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IEmailSender emailSender,
         IReportRepository reportRepository,
-        IMediaStorageService mediaStorageService)
+        IMediaStorageService mediaStorageService,
+        IConfiguration configuration)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _emailSender = emailSender;
         _reportRepository = reportRepository;
         _mediaStorageService = mediaStorageService;
+        _backendBaseUrl = configuration["App:BackendBaseUrl"] ?? "http://localhost:8080";
     }
 
     public async Task<ReportResponseDto> CreateReportAsync(
@@ -107,7 +111,7 @@ public class ReportService : IReportService
         try
         {
             var subject = $"[{report.Type.ToUpper()} #{report.Id.ToString()[..8].ToUpper()}] {report.Title}";
-            var htmlBody = BuildEmailBody(user, report);
+            var htmlBody = BuildEmailBody(user, report, _backendBaseUrl);
             await _emailSender.SendAsync(SupportEmail, subject, htmlBody, cancellationToken);
         }
         catch (Exception ex)
@@ -116,7 +120,7 @@ public class ReportService : IReportService
         }
     }
 
-    private static string BuildEmailBody(Domain.Entities.User user, Report report)
+    private static string BuildEmailBody(Domain.Entities.User user, Report report, string backendBaseUrl)
     {
         var typeBadgeColor = report.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase) ? "#f8d7da" : "#d1ecf1";
         var typeTextColor = report.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase) ? "#721c24" : "#0c5460";
@@ -135,12 +139,25 @@ public class ReportService : IReportService
             </div>";
         }
 
+        var fontBaseUrl = backendBaseUrl.TrimEnd('/');
         return $@"<!DOCTYPE html>
 <html lang=""en"">
 <head>
     <meta charset=""UTF-8""/>
     <style>
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }}
+        @font-face {{
+            font-family: 'HarmonyOS Sans';
+            src: url('{fontBaseUrl}/fonts/HarmonyOS_Sans_Regular.ttf') format('truetype');
+            font-weight: 400;
+            font-style: normal;
+        }}
+        @font-face {{
+            font-family: 'HarmonyOS Sans';
+            src: url('{fontBaseUrl}/fonts/HarmonyOS_Sans_Bold.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+        }}
+        body {{ font-family: 'HarmonyOS Sans', 'Segoe UI', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }}
         .container {{ max-width: 600px; margin: 32px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
         .header {{ background: linear-gradient(135deg, #6c63ff, #a78bfa); padding: 28px 32px; color: #fff; }}
         .header h1 {{ margin: 0; font-size: 20px; font-weight: 700; }}

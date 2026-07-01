@@ -54,6 +54,13 @@ public class AdminStoreService : IAdminStoreService
     {
         ValidateRequest(request.Name, request.AssetUrl, request.CoinPrice, request.RealMoneyPriceVnd);
 
+        var (stickerId, stickerItems) = await ProcessSlotComponentsAsync(request.ThemeStickerItemId, request.ThemeStickerItemIds, cancellationToken);
+        var (backgroundId, backgroundItems) = await ProcessSlotComponentsAsync(request.ThemeBackgroundItemId, request.ThemeBackgroundItemIds, cancellationToken);
+        var (effectId, effectItems) = await ProcessSlotComponentsAsync(request.ThemeEffectItemId, request.ThemeEffectItemIds, cancellationToken);
+        var (soundId, soundItems) = await ProcessSlotComponentsAsync(request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds, cancellationToken);
+
+        var allItemsToCreate = stickerItems.Concat(backgroundItems).Concat(effectItems).Concat(soundItems).ToList();
+
         var item = new StoreItem
         {
             Category = request.Category,
@@ -62,19 +69,31 @@ public class AdminStoreService : IAdminStoreService
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
             PreviewUrl = request.PreviewUrl?.Trim(),
-            ThemeStickerItemId = request.ThemeStickerItemId,
-            ThemeBackgroundItemId = request.ThemeBackgroundItemId,
-            ThemeEffectItemId = request.ThemeEffectItemId,
-            ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId,
+            ThemeStickerItemId = stickerId,
+            ThemeBackgroundItemId = backgroundId,
+            ThemeEffectItemId = effectId,
+            ThemeAmbientSoundItemId = soundId,
             IsPremium = request.IsPremium,
             CoinPrice = NormalizeCoinPrice(request.CoinPrice),
             RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd),
             IsActive = request.IsActive
         };
 
-        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, allItemsToCreate.Count);
 
         await _storeRepository.AddStoreItemAsync(item, cancellationToken);
+        
+        foreach (var comp in allItemsToCreate)
+            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        foreach (var comp in allItemsToCreate)
+        {
+            comp.ParentThemeId = item.Id;
+            await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToAdminDto(item);
     }
@@ -86,25 +105,55 @@ public class AdminStoreService : IAdminStoreService
 
         ValidateRequest(request.Name, request.AssetUrl, request.CoinPrice, request.RealMoneyPriceVnd);
 
+        // Soft-delete old inline components before replacing
+        var oldInline = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+        var now = DateTime.UtcNow;
+        foreach (var comp in oldInline)
+        {
+            comp.IsDeleted = true;
+            comp.DeletedAt = now;
+            comp.UpdatedAt = now;
+            await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
+        }
+
+        var (stickerId, stickerItems) = await ProcessSlotComponentsAsync(request.ThemeStickerItemId, request.ThemeStickerItemIds, cancellationToken);
+        var (backgroundId, backgroundItems) = await ProcessSlotComponentsAsync(request.ThemeBackgroundItemId, request.ThemeBackgroundItemIds, cancellationToken);
+        var (effectId, effectItems) = await ProcessSlotComponentsAsync(request.ThemeEffectItemId, request.ThemeEffectItemIds, cancellationToken);
+        var (soundId, soundItems) = await ProcessSlotComponentsAsync(request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds, cancellationToken);
+
+        var allItemsToCreate = stickerItems.Concat(backgroundItems).Concat(effectItems).Concat(soundItems).ToList();
+
         item.Category = request.Category;
         item.ThemeSource = request.Category == StoreCategory.Theme ? request.ThemeSource ?? StoreThemeSource.Official : null;
         item.Name = request.Name.Trim();
         item.Description = request.Description?.Trim();
         item.AssetUrl = request.AssetUrl.Trim();
         item.PreviewUrl = request.PreviewUrl?.Trim();
-        item.ThemeStickerItemId = request.ThemeStickerItemId;
-        item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
-        item.ThemeEffectItemId = request.ThemeEffectItemId;
-        item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+        item.ThemeStickerItemId = stickerId;
+        item.ThemeBackgroundItemId = backgroundId;
+        item.ThemeEffectItemId = effectId;
+        item.ThemeAmbientSoundItemId = soundId;
         item.IsPremium = request.IsPremium;
         item.CoinPrice = NormalizeCoinPrice(request.CoinPrice);
         item.RealMoneyPriceVnd = NormalizeMoneyPrice(request.RealMoneyPriceVnd);
         item.IsActive = request.IsActive;
         item.UpdatedAt = DateTime.UtcNow;
 
-        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, allItemsToCreate.Count);
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        foreach (var comp in allItemsToCreate)
+            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        foreach (var comp in allItemsToCreate)
+        {
+            comp.ParentThemeId = item.Id;
+            await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToAdminDto(item);
     }
@@ -142,17 +191,36 @@ public class AdminStoreService : IAdminStoreService
         if (request.PreviewUrl is not null)
             item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
 
-        if (request.ThemeStickerItemId != default)
-            item.ThemeStickerItemId = request.ThemeStickerItemId;
+        var patchedInlineItems = new List<StoreItem>();
+        var now = DateTime.UtcNow;
 
-        if (request.ThemeBackgroundItemId != default)
-            item.ThemeBackgroundItemId = request.ThemeBackgroundItemId;
+        async Task HandleSlotIdsAsync(
+            Guid? singularId,
+            List<Guid>? multipleIds,
+            StoreCategory category,
+            Action<Guid?> setSlotId)
+        {
+            if (singularId != null || multipleIds != null)
+            {
+                var oldInline = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+                foreach (var oldComp in oldInline.Where(x => x.Category == category))
+                {
+                    oldComp.IsDeleted = true;
+                    oldComp.DeletedAt = now;
+                    oldComp.UpdatedAt = now;
+                    await _storeRepository.UpdateStoreItemAsync(oldComp, cancellationToken);
+                }
 
-        if (request.ThemeEffectItemId != default)
-            item.ThemeEffectItemId = request.ThemeEffectItemId;
+                var (firstId, items) = await ProcessSlotComponentsAsync(singularId, multipleIds, cancellationToken);
+                setSlotId(firstId);
+                patchedInlineItems.AddRange(items);
+            }
+        }
 
-        if (request.ThemeAmbientSoundItemId != default)
-            item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId;
+        await HandleSlotIdsAsync(request.ThemeStickerItemId, request.ThemeStickerItemIds, StoreCategory.Sticker, v => item.ThemeStickerItemId = v);
+        await HandleSlotIdsAsync(request.ThemeBackgroundItemId, request.ThemeBackgroundItemIds, StoreCategory.Background, v => item.ThemeBackgroundItemId = v);
+        await HandleSlotIdsAsync(request.ThemeEffectItemId, request.ThemeEffectItemIds, StoreCategory.Effect, v => item.ThemeEffectItemId = v);
+        await HandleSlotIdsAsync(request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds, StoreCategory.AmbientSound, v => item.ThemeAmbientSoundItemId = v);
 
         if (request.IsPremium is not null)
             item.IsPremium = request.IsPremium.Value;
@@ -168,9 +236,21 @@ public class AdminStoreService : IAdminStoreService
 
         item.UpdatedAt = DateTime.UtcNow;
 
-        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId);
+        ValidateThemeComponents(item.Category, item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId, patchedInlineItems.Count);
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        foreach (var comp in patchedInlineItems)
+            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        foreach (var comp in patchedInlineItems)
+        {
+            comp.ParentThemeId = item.Id;
+            await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return ToAdminDto(item);
     }
@@ -382,12 +462,59 @@ public class AdminStoreService : IAdminStoreService
             x.RejectionNote, x.ReviewedAt,
             x.CreatedAt, x.UpdatedAt);
 
+    private async Task<(Guid? firstId, List<StoreItem> itemsToCreate)> ProcessSlotComponentsAsync(
+        Guid? singularId,
+        List<Guid>? multipleIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = new List<Guid>();
+        if (singularId.HasValue && singularId != Guid.Empty)
+            ids.Add(singularId.Value);
+        if (multipleIds != null)
+            ids.AddRange(multipleIds.Where(id => id != Guid.Empty));
+
+        Guid? firstId = null;
+        var itemsToCreate = new List<StoreItem>();
+
+        if (ids.Count > 0)
+        {
+            firstId = ids[0];
+            for (int i = 1; i < ids.Count; i++)
+            {
+                var cloned = await CloneAsInlineComponentAsync(ids[i], cancellationToken);
+                itemsToCreate.Add(cloned);
+            }
+        }
+
+        return (firstId, itemsToCreate);
+    }
+
+    private async Task<StoreItem> CloneAsInlineComponentAsync(Guid originalId, CancellationToken cancellationToken)
+    {
+        var original = await _storeRepository.GetByIdAsync(originalId, cancellationToken)
+            ?? throw new NotFoundException($"Store item '{originalId}' not found.");
+        return new StoreItem
+        {
+            Category = original.Category,
+            ThemeSource = null,
+            Name = original.Name,
+            Description = original.Description,
+            AssetUrl = original.AssetUrl,
+            PreviewUrl = original.PreviewUrl,
+            IsPremium = original.IsPremium,
+            IsActive = true,
+            CreatorId = null,
+            Status = StoreItemStatus.Approved
+        };
+    }
+
     private static void ValidateThemeComponents(
         StoreCategory category,
         Guid? stickerItemId,
         Guid? backgroundItemId,
         Guid? effectItemId,
-        Guid? ambientSoundItemId)
+        Guid? ambientSoundItemId,
+        int inlineCount = 0)
     {
         if (category != StoreCategory.Theme)
             return;
@@ -395,7 +522,7 @@ public class AdminStoreService : IAdminStoreService
         var provided = new[] { stickerItemId, backgroundItemId, effectItemId, ambientSoundItemId }
             .Count(id => id is not null);
 
-        if (provided < 2)
+        if (provided + inlineCount < 2)
             throw new ValidationException("Theme items must include at least 2 different component types (sticker, background, effect, or ambient sound).");
     }
 }

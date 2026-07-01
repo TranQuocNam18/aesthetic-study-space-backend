@@ -23,7 +23,7 @@ public class AssetService : IAssetService
     public async Task<IReadOnlyList<AssetDto>> GetAllAsync(string? type, string? category, CancellationToken cancellationToken = default)
     {
         AssetType? assetType = null;
-        AssetCategory? assetCategory = null;
+        string? assetCategory = null;
 
         if (!string.IsNullOrWhiteSpace(type))
             assetType = MappingExtensions.ParseAssetType(type);

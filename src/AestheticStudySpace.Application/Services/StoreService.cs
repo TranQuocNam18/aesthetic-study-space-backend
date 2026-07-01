@@ -43,9 +43,17 @@ public class StoreService : IStoreService
         var total = await _storeRepository.CountActiveItemsAsync(category, themeSource, scope, cancellationToken);
         var items = await _storeRepository.GetActiveItemsAsync(category, themeSource, scope, page, pageSize, cancellationToken);
 
+        var themeIds = items.Where(x => x.Category == StoreCategory.Theme).Select(x => x.Id).ToList();
+        var allInline = new Dictionary<Guid, IReadOnlyList<StoreItem>>();
+        foreach (var tid in themeIds)
+        {
+            var inline = await _storeRepository.GetInlineComponentsByThemeIdAsync(tid, cancellationToken);
+            allInline[tid] = inline;
+        }
+
         return new PagedResult<StoreItemDto>
         {
-            Items = items.Select(x => ToDto(x, ownedIds)).ToList(),
+            Items = items.Select(x => ToDto(x, ownedIds, allInline.GetValueOrDefault(x.Id))).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = total
@@ -61,7 +69,11 @@ public class StoreService : IStoreService
         if (viewerUserId is not null)
             ownedIds = await _storeRepository.GetOwnedStoreItemIdsAsync(viewerUserId.Value, cancellationToken);
 
-        return ToDto(item, ownedIds);
+        IReadOnlyList<StoreItem>? inline = null;
+        if (item.Category == StoreCategory.Theme)
+            inline = await _storeRepository.GetInlineComponentsByThemeIdAsync(item.Id, cancellationToken);
+
+        return ToDto(item, ownedIds, inline);
     }
 
     public async Task<PagedResult<UserInventoryItemDto>> GetInventoryAsync(
@@ -350,7 +362,7 @@ public class StoreService : IStoreService
             payment.SucceededAt ?? payment.CreatedAt);
     }
 
-    private static StoreItemDto ToDto(StoreItem x, HashSet<Guid>? ownedIds) =>
+    private static StoreItemDto ToDto(StoreItem x, HashSet<Guid>? ownedIds, IReadOnlyList<StoreItem>? inlineComponents = null) =>
         new(
             x.Id,
             x.Category,
@@ -369,5 +381,6 @@ public class StoreService : IStoreService
             x.IsActive,
             ownedIds is null ? null : ownedIds.Contains(x.Id),
             x.CoinPrice is > 0,
-            x.RealMoneyPriceVnd is > 0);
+            x.RealMoneyPriceVnd is > 0,
+            inlineComponents?.Select(c => ToDto(c, ownedIds, null)).ToList());
 }

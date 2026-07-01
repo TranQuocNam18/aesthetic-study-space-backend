@@ -15,7 +15,7 @@ public class AssetConfiguration : IEntityTypeConfiguration<Asset>
         builder.Property(a => a.Url).HasMaxLength(2048).IsRequired();
         builder.Property(a => a.PreviewUrl).HasMaxLength(2048);
         builder.Property(a => a.AssetType).HasConversion<string>().HasMaxLength(20);
-        builder.Property(a => a.Category).HasConversion<string>().HasMaxLength(30);
+        builder.Property(a => a.Category).HasMaxLength(30).IsRequired();
         builder.HasIndex(a => a.AssetType);
         builder.HasIndex(a => a.Category);
     }

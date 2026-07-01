@@ -100,7 +100,7 @@ public static class SeedData
             Description = "Soft rainfall ambience",
             Url = "https://res.cloudinary.com/demo/video/upload/rain.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.Rain,
+            Category = AssetCategory.Rain.ToString(),
             DefaultVolume = 70,
             IsPremium = false
         };
@@ -112,7 +112,7 @@ public static class SeedData
             Description = "Low café background chatter",
             Url = "https://res.cloudinary.com/demo/video/upload/cafe.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.Cafe,
+            Category = AssetCategory.Cafe.ToString(),
             DefaultVolume = 55,
             IsPremium = false
         };
@@ -124,7 +124,7 @@ public static class SeedData
             Description = "Steady white noise for focus",
             Url = "https://res.cloudinary.com/demo/video/upload/whitenoise.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.WhiteNoise,
+            Category = AssetCategory.WhiteNoise.ToString(),
             DefaultVolume = 60,
             IsPremium = false
         };
@@ -136,7 +136,7 @@ public static class SeedData
             Description = "Animated cat visual layer",
             Url = "https://res.cloudinary.com/demo/image/upload/cat-sleeping.gif",
             AssetType = AssetType.Sticker,
-            Category = AssetCategory.Pet,
+            Category = AssetCategory.Pet.ToString(),
             DefaultVolume = 0,
             IsPremium = false
         };
@@ -148,7 +148,7 @@ public static class SeedData
             Description = "Premium lofi hip-hop stream",
             Url = "https://res.cloudinary.com/demo/video/upload/lofi-premium.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.Lofi,
+            Category = AssetCategory.Lofi.ToString(),
             DefaultVolume = 65,
             IsPremium = true
         };

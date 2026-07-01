@@ -1,6 +1,7 @@
 using AestheticStudySpace.Application.Interfaces.Services;
 using AestheticStudySpace.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace AestheticStudySpace.Infrastructure.Integrations;
@@ -11,15 +12,18 @@ public class RetentionEmailService : IRetentionEmailService
     private readonly AppDbContext _context;
     private readonly IEmailSender _emailSender;
     private readonly ILogger<RetentionEmailService> _logger;
+    private readonly string _backendBaseUrl;
 
     public RetentionEmailService(
         AppDbContext context,
         IEmailSender emailSender,
+        IConfiguration configuration,
         ILogger<RetentionEmailService> logger)
     {
         _context = context;
         _emailSender = emailSender;
         _logger = logger;
+        _backendBaseUrl = configuration["App:BackendBaseUrl"] ?? "http://localhost:8080";
     }
 
     public async Task<int> SendRetentionEmailsAsync(CancellationToken cancellationToken = default)
@@ -50,7 +54,7 @@ public class RetentionEmailService : IRetentionEmailService
         {
             try
             {
-                var emailBody = GetRetentionEmailHtml(user.Username);
+                var emailBody = GetRetentionEmailHtml(user.Username, _backendBaseUrl);
                 
                 await _emailSender.SendAsync(
                     user.Email,
@@ -86,7 +90,7 @@ public class RetentionEmailService : IRetentionEmailService
             return false;
         }
 
-        var emailBody = GetRetentionEmailHtml(user.Username);
+        var emailBody = GetRetentionEmailHtml(user.Username, _backendBaseUrl);
         
         await _emailSender.SendAsync(
             user.Email,
@@ -102,8 +106,9 @@ public class RetentionEmailService : IRetentionEmailService
         return true;
     }
 
-    private string GetRetentionEmailHtml(string username)
+    private string GetRetentionEmailHtml(string username, string backendBaseUrl)
     {
+        var fontBaseUrl = backendBaseUrl.TrimEnd('/');
         return $@"
         <!DOCTYPE html>
         <html>
@@ -112,8 +117,20 @@ public class RetentionEmailService : IRetentionEmailService
             <meta name='viewport' content='width=device-width, initial-scale=1.0'>
             <title>Góc học tập đang đợi bạn!</title>
             <style>
+                @font-face {{
+                    font-family: 'HarmonyOS Sans';
+                    src: url('{fontBaseUrl}/fonts/HarmonyOS_Sans_Regular.ttf') format('truetype');
+                    font-weight: 400;
+                    font-style: normal;
+                }}
+                @font-face {{
+                    font-family: 'HarmonyOS Sans';
+                    src: url('{fontBaseUrl}/fonts/HarmonyOS_Sans_Bold.ttf') format('truetype');
+                    font-weight: 700;
+                    font-style: normal;
+                }}
                 body {{
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    font-family: 'HarmonyOS Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                     background-color: #0C0F0F;
                     margin: 0;
                     padding: 0;

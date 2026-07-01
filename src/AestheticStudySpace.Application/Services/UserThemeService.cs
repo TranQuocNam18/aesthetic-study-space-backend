@@ -39,20 +39,36 @@ public class UserThemeService : IUserThemeService
         if (user.IsBanned)
             throw new UnauthorizedException("Banned users cannot submit themes.");
 
-        // Build inline component StoreItems (Luồng C)
-        var (inlineSticker, inlineBackground, inlineEffect, inlineAmbientSound)
-            = BuildInlineComponents(userId, request);
+        // Gather components for each slot
+        var (stickerId, stickerItems) = await ProcessSlotComponentsAsync(
+            request.ThemeStickerItemId, request.ThemeStickerItemIds,
+            request.InlineSticker, request.InlineStickers,
+            StoreCategory.Sticker, userId, cancellationToken);
 
-        // Determine the effective slot IDs (from store or inline)
-        var stickerItemId   = ResolveSlot(request.ThemeStickerItemId,     inlineSticker);
-        var backgroundItemId = ResolveSlot(request.ThemeBackgroundItemId, inlineBackground);
-        var effectItemId    = ResolveSlot(request.ThemeEffectItemId,      inlineEffect);
-        var soundItemId     = ResolveSlot(request.ThemeAmbientSoundItemId, inlineAmbientSound);
+        var (backgroundId, backgroundItems) = await ProcessSlotComponentsAsync(
+            request.ThemeBackgroundItemId, request.ThemeBackgroundItemIds,
+            request.InlineBackground, request.InlineBackgrounds,
+            StoreCategory.Background, userId, cancellationToken);
 
-        var inlineItemsCount = new[] { inlineSticker, inlineBackground, inlineEffect, inlineAmbientSound }
-            .Count(x => x is not null);
+        var (effectId, effectItems) = await ProcessSlotComponentsAsync(
+            request.ThemeEffectItemId, request.ThemeEffectItemIds,
+            request.InlineEffect, request.InlineEffects,
+            StoreCategory.Effect, userId, cancellationToken);
 
-        ValidateThemeComponentCount(stickerItemId, backgroundItemId, effectItemId, soundItemId, inlineItemsCount);
+        var (soundId, soundItems) = await ProcessSlotComponentsAsync(
+            request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds,
+            request.InlineAmbientSound, request.InlineAmbientSounds,
+            StoreCategory.AmbientSound, userId, cancellationToken);
+
+        var allItemsToCreate = stickerItems.Concat(backgroundItems).Concat(effectItems).Concat(soundItems).ToList();
+
+        var providedCount = (stickerId != null || stickerItems.Any() ? 1 : 0)
+            + (backgroundId != null || backgroundItems.Any() ? 1 : 0)
+            + (effectId != null || effectItems.Any() ? 1 : 0)
+            + (soundId != null || soundItems.Any() ? 1 : 0);
+
+        if (providedCount < 2)
+            throw new ValidationException("Theme submissions must include at least 2 different component types (sticker, background, effect, or ambient sound).");
 
         // Create the Theme StoreItem
         var theme = new StoreItem
@@ -63,10 +79,10 @@ public class UserThemeService : IUserThemeService
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
             PreviewUrl = request.PreviewUrl?.Trim(),
-            ThemeStickerItemId = stickerItemId,
-            ThemeBackgroundItemId = backgroundItemId,
-            ThemeEffectItemId = effectItemId,
-            ThemeAmbientSoundItemId = soundItemId,
+            ThemeStickerItemId = stickerId,
+            ThemeBackgroundItemId = backgroundId,
+            ThemeEffectItemId = effectId,
+            ThemeAmbientSoundItemId = soundId,
             IsPremium = false,
             CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null,
             RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null,
@@ -77,36 +93,33 @@ public class UserThemeService : IUserThemeService
 
         await _storeRepository.AddStoreItemAsync(theme, cancellationToken);
 
-        // Persist inline components first so they get IDs before we link them
-        var inlineItems = new[] { inlineSticker, inlineBackground, inlineEffect, inlineAmbientSound }
-            .Where(x => x is not null)
-            .Cast<StoreItem>()
-            .ToList();
-
-        foreach (var comp in inlineItems)
+        foreach (var comp in allItemsToCreate)
             await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
 
         // SaveChanges once to generate IDs for all items
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Now update the inline components' ParentThemeId to point to the Theme we just created
-        foreach (var comp in inlineItems)
+        foreach (var comp in allItemsToCreate)
         {
             comp.ParentThemeId = theme.Id;
             await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
         }
 
         // Also update Theme's ThemeXxxItemId slots that came from inline items
-        // (they were set to Guid.Empty placeholder; now we have the real IDs)
-        theme.ThemeStickerItemId     = inlineSticker     is not null ? inlineSticker.Id     : theme.ThemeStickerItemId;
-        theme.ThemeBackgroundItemId  = inlineBackground  is not null ? inlineBackground.Id  : theme.ThemeBackgroundItemId;
-        theme.ThemeEffectItemId      = inlineEffect      is not null ? inlineEffect.Id      : theme.ThemeEffectItemId;
-        theme.ThemeAmbientSoundItemId = inlineAmbientSound is not null ? inlineAmbientSound.Id : theme.ThemeAmbientSoundItemId;
+        if (theme.ThemeStickerItemId == null && stickerItems.Any())
+            theme.ThemeStickerItemId = stickerItems.First().Id;
+        if (theme.ThemeBackgroundItemId == null && backgroundItems.Any())
+            theme.ThemeBackgroundItemId = backgroundItems.First().Id;
+        if (theme.ThemeEffectItemId == null && effectItems.Any())
+            theme.ThemeEffectItemId = effectItems.First().Id;
+        if (theme.ThemeAmbientSoundItemId == null && soundItems.Any())
+            theme.ThemeAmbientSoundItemId = soundItems.First().Id;
 
         await _storeRepository.UpdateStoreItemAsync(theme, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToDto(theme, inlineItems);
+        return ToDto(theme, allItemsToCreate);
     }
 
     public async Task<PagedResult<UserThemeSubmissionDto>> GetMySubmissionsAsync(
@@ -202,27 +215,45 @@ public class UserThemeService : IUserThemeService
             await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
         }
 
-        var (inlineSticker, inlineBackground, inlineEffect, inlineAmbientSound)
-            = BuildInlineComponents(userId, request);
+        // Gather components for each slot
+        var (stickerId, stickerItems) = await ProcessSlotComponentsAsync(
+            request.ThemeStickerItemId, request.ThemeStickerItemIds,
+            request.InlineSticker, request.InlineStickers,
+            StoreCategory.Sticker, userId, cancellationToken);
 
-        var stickerItemId    = ResolveSlot(request.ThemeStickerItemId,      inlineSticker);
-        var backgroundItemId = ResolveSlot(request.ThemeBackgroundItemId,   inlineBackground);
-        var effectItemId     = ResolveSlot(request.ThemeEffectItemId,       inlineEffect);
-        var soundItemId      = ResolveSlot(request.ThemeAmbientSoundItemId, inlineAmbientSound);
+        var (backgroundId, backgroundItems) = await ProcessSlotComponentsAsync(
+            request.ThemeBackgroundItemId, request.ThemeBackgroundItemIds,
+            request.InlineBackground, request.InlineBackgrounds,
+            StoreCategory.Background, userId, cancellationToken);
 
-        var inlineItemsCount = new[] { inlineSticker, inlineBackground, inlineEffect, inlineAmbientSound }
-            .Count(x => x is not null);
+        var (effectId, effectItems) = await ProcessSlotComponentsAsync(
+            request.ThemeEffectItemId, request.ThemeEffectItemIds,
+            request.InlineEffect, request.InlineEffects,
+            StoreCategory.Effect, userId, cancellationToken);
 
-        ValidateThemeComponentCount(stickerItemId, backgroundItemId, effectItemId, soundItemId, inlineItemsCount);
+        var (soundId, soundItems) = await ProcessSlotComponentsAsync(
+            request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds,
+            request.InlineAmbientSound, request.InlineAmbientSounds,
+            StoreCategory.AmbientSound, userId, cancellationToken);
+
+        var allItemsToCreate = stickerItems.Concat(backgroundItems).Concat(effectItems).Concat(soundItems).ToList();
+
+        var providedCount = (stickerId != null || stickerItems.Any() ? 1 : 0)
+            + (backgroundId != null || backgroundItems.Any() ? 1 : 0)
+            + (effectId != null || effectItems.Any() ? 1 : 0)
+            + (soundId != null || soundItems.Any() ? 1 : 0);
+
+        if (providedCount < 2)
+            throw new ValidationException("Theme submissions must include at least 2 different component types (sticker, background, effect, or ambient sound).");
 
         item.Name = request.Name.Trim();
         item.Description = request.Description?.Trim();
         item.AssetUrl = request.AssetUrl.Trim();
         item.PreviewUrl = request.PreviewUrl?.Trim();
-        item.ThemeStickerItemId = stickerItemId;
-        item.ThemeBackgroundItemId = backgroundItemId;
-        item.ThemeEffectItemId = effectItemId;
-        item.ThemeAmbientSoundItemId = soundItemId;
+        item.ThemeStickerItemId = stickerId;
+        item.ThemeBackgroundItemId = backgroundId;
+        item.ThemeEffectItemId = effectId;
+        item.ThemeAmbientSoundItemId = soundId;
         item.CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null;
         item.RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null;
         item.Status = StoreItemStatus.PendingReview;
@@ -231,30 +262,31 @@ public class UserThemeService : IUserThemeService
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
 
-        var newInlineItems = new[] { inlineSticker, inlineBackground, inlineEffect, inlineAmbientSound }
-            .Where(x => x is not null).Cast<StoreItem>().ToList();
-
-        foreach (var comp in newInlineItems)
+        foreach (var comp in allItemsToCreate)
             await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Update ParentThemeId and resolve IDs
-        foreach (var comp in newInlineItems)
+        foreach (var comp in allItemsToCreate)
         {
             comp.ParentThemeId = item.Id;
             await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
         }
 
-        item.ThemeStickerItemId      = inlineSticker     is not null ? inlineSticker.Id      : item.ThemeStickerItemId;
-        item.ThemeBackgroundItemId   = inlineBackground  is not null ? inlineBackground.Id   : item.ThemeBackgroundItemId;
-        item.ThemeEffectItemId       = inlineEffect      is not null ? inlineEffect.Id       : item.ThemeEffectItemId;
-        item.ThemeAmbientSoundItemId = inlineAmbientSound is not null ? inlineAmbientSound.Id : item.ThemeAmbientSoundItemId;
+        if (item.ThemeStickerItemId == null && stickerItems.Any())
+            item.ThemeStickerItemId = stickerItems.First().Id;
+        if (item.ThemeBackgroundItemId == null && backgroundItems.Any())
+            item.ThemeBackgroundItemId = backgroundItems.First().Id;
+        if (item.ThemeEffectItemId == null && effectItems.Any())
+            item.ThemeEffectItemId = effectItems.First().Id;
+        if (item.ThemeAmbientSoundItemId == null && soundItems.Any())
+            item.ThemeAmbientSoundItemId = soundItems.First().Id;
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToDto(item, newInlineItems);
+        return ToDto(item, allItemsToCreate);
     }
 
     public async Task<UserThemeSubmissionDto> PatchThemeAsync(
@@ -291,91 +323,76 @@ public class UserThemeService : IUserThemeService
         if (request.PreviewUrl is not null)
             item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
 
-        if (request.ThemeStickerItemId != default)
-            item.ThemeStickerItemId = request.ThemeStickerItemId == Guid.Empty ? null : request.ThemeStickerItemId;
-
-        if (request.ThemeBackgroundItemId != default)
-            item.ThemeBackgroundItemId = request.ThemeBackgroundItemId == Guid.Empty ? null : request.ThemeBackgroundItemId;
-
-        if (request.ThemeEffectItemId != default)
-            item.ThemeEffectItemId = request.ThemeEffectItemId == Guid.Empty ? null : request.ThemeEffectItemId;
-
-        if (request.ThemeAmbientSoundItemId != default)
-            item.ThemeAmbientSoundItemId = request.ThemeAmbientSoundItemId == Guid.Empty ? null : request.ThemeAmbientSoundItemId;
-
         if (request.CoinPrice is not null)
             item.CoinPrice = request.CoinPrice > 0 ? request.CoinPrice : null;
 
         if (request.RealMoneyPriceVnd is not null)
             item.RealMoneyPriceVnd = request.RealMoneyPriceVnd > 0 ? request.RealMoneyPriceVnd : null;
 
-        // Handle new inline components in PATCH (add/replace per slot)
         var patchedInlineItems = new List<StoreItem>();
 
         async Task HandleInlineSlot(
             InlineComponentDto? inlineDto,
+            List<InlineComponentDto>? inlineDtos,
+            Guid? existingId,
+            List<Guid>? existingIds,
             StoreCategory category,
             Func<Guid?> getOldInlineId,
             Action<Guid?> setSlotId)
         {
-            if (inlineDto is null) return;
-            ValidateInlineComponent(inlineDto, category);
-
-            // Remove old inline for this slot if it exists
-            var oldId = getOldInlineId();
-            if (oldId.HasValue)
+            // If any modifications are requested for this slot
+            if (inlineDto != null || inlineDtos != null || existingId != null || existingIds != null)
             {
-                var oldComp = await _storeRepository.GetUserComponentSubmissionByIdAsync(userId, oldId.Value, cancellationToken);
-                if (oldComp is not null && oldComp.ParentThemeId == item.Id)
+                // Remove old inline components for this slot if any exist
+                var oldInline = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+                foreach (var oldComp in oldInline.Where(x => x.Category == category))
                 {
                     oldComp.IsDeleted = true;
                     oldComp.DeletedAt = now;
                     oldComp.UpdatedAt = now;
                     await _storeRepository.UpdateStoreItemAsync(oldComp, cancellationToken);
                 }
-            }
 
-            var newComp = CreateInlineItem(userId, inlineDto);
-            await _storeRepository.AddStoreItemAsync(newComp, cancellationToken);
-            patchedInlineItems.Add(newComp);
-            setSlotId(null); // Will be resolved after SaveChanges
+                var (firstId, items) = await ProcessSlotComponentsAsync(existingId, existingIds, inlineDto, inlineDtos, category, userId, cancellationToken);
+                setSlotId(firstId);
+                patchedInlineItems.AddRange(items);
+            }
         }
 
-        await HandleInlineSlot(request.InlineSticker,     StoreCategory.Sticker,     () => item.ThemeStickerItemId,      v => item.ThemeStickerItemId = v);
-        await HandleInlineSlot(request.InlineBackground,  StoreCategory.Background,  () => item.ThemeBackgroundItemId,   v => item.ThemeBackgroundItemId = v);
-        await HandleInlineSlot(request.InlineEffect,      StoreCategory.Effect,      () => item.ThemeEffectItemId,       v => item.ThemeEffectItemId = v);
-        await HandleInlineSlot(request.InlineAmbientSound, StoreCategory.AmbientSound, () => item.ThemeAmbientSoundItemId, v => item.ThemeAmbientSoundItemId = v);
-
-        ValidateThemeComponentCount(item.ThemeStickerItemId, item.ThemeBackgroundItemId, item.ThemeEffectItemId, item.ThemeAmbientSoundItemId,
-            patchedInlineItems.Count);
+        await HandleInlineSlot(request.InlineSticker, request.InlineStickers, request.ThemeStickerItemId, request.ThemeStickerItemIds, StoreCategory.Sticker, () => item.ThemeStickerItemId, v => item.ThemeStickerItemId = v);
+        await HandleInlineSlot(request.InlineBackground, request.InlineBackgrounds, request.ThemeBackgroundItemId, request.ThemeBackgroundItemIds, StoreCategory.Background, () => item.ThemeBackgroundItemId, v => item.ThemeBackgroundItemId = v);
+        await HandleInlineSlot(request.InlineEffect, request.InlineEffects, request.ThemeEffectItemId, request.ThemeEffectItemIds, StoreCategory.Effect, () => item.ThemeEffectItemId, v => item.ThemeEffectItemId = v);
+        await HandleInlineSlot(request.InlineAmbientSound, request.InlineAmbientSounds, request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds, StoreCategory.AmbientSound, () => item.ThemeAmbientSoundItemId, v => item.ThemeAmbientSoundItemId = v);
 
         item.Status = StoreItemStatus.PendingReview;
         item.RejectionNote = null;
         item.UpdatedAt = now;
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        
+        foreach (var comp in patchedInlineItems)
+            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Resolve inline IDs post-save
         foreach (var comp in patchedInlineItems)
         {
             comp.ParentThemeId = item.Id;
-            if (comp.Category == StoreCategory.Sticker && request.InlineSticker is not null)
-                item.ThemeStickerItemId = comp.Id;
-            else if (comp.Category == StoreCategory.Background && request.InlineBackground is not null)
-                item.ThemeBackgroundItemId = comp.Id;
-            else if (comp.Category == StoreCategory.Effect && request.InlineEffect is not null)
-                item.ThemeEffectItemId = comp.Id;
-            else if (comp.Category == StoreCategory.AmbientSound && request.InlineAmbientSound is not null)
-                item.ThemeAmbientSoundItemId = comp.Id;
             await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
         }
 
-        if (patchedInlineItems.Count > 0)
-        {
-            await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }
+        if (item.ThemeStickerItemId == null && patchedInlineItems.Any(x => x.Category == StoreCategory.Sticker))
+            item.ThemeStickerItemId = patchedInlineItems.First(x => x.Category == StoreCategory.Sticker).Id;
+        if (item.ThemeBackgroundItemId == null && patchedInlineItems.Any(x => x.Category == StoreCategory.Background))
+            item.ThemeBackgroundItemId = patchedInlineItems.First(x => x.Category == StoreCategory.Background).Id;
+        if (item.ThemeEffectItemId == null && patchedInlineItems.Any(x => x.Category == StoreCategory.Effect))
+            item.ThemeEffectItemId = patchedInlineItems.First(x => x.Category == StoreCategory.Effect).Id;
+        if (item.ThemeAmbientSoundItemId == null && patchedInlineItems.Any(x => x.Category == StoreCategory.AmbientSound))
+            item.ThemeAmbientSoundItemId = patchedInlineItems.First(x => x.Category == StoreCategory.AmbientSound).Id;
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var allInline = await _storeRepository.GetInlineComponentsByThemeIdAsync(item.Id, cancellationToken);
         return ToDto(item, allInline);
@@ -394,24 +411,32 @@ public class UserThemeService : IUserThemeService
         if (request.RealMoneyPriceVnd is < 0)
             throw new ValidationException("RealMoneyPriceVnd cannot be negative.");
 
-        // Validate no slot has both an existing ID and an inline component
-        ValidateNoSlotConflict(request.ThemeStickerItemId,      request.InlineSticker,      "Sticker");
-        ValidateNoSlotConflict(request.ThemeBackgroundItemId,   request.InlineBackground,   "Background");
-        ValidateNoSlotConflict(request.ThemeEffectItemId,       request.InlineEffect,       "Effect");
-        ValidateNoSlotConflict(request.ThemeAmbientSoundItemId, request.InlineAmbientSound, "AmbientSound");
-
         // Validate inline component fields
         if (request.InlineSticker is not null)      ValidateInlineComponent(request.InlineSticker,      StoreCategory.Sticker);
         if (request.InlineBackground is not null)   ValidateInlineComponent(request.InlineBackground,   StoreCategory.Background);
         if (request.InlineEffect is not null)       ValidateInlineComponent(request.InlineEffect,       StoreCategory.Effect);
         if (request.InlineAmbientSound is not null) ValidateInlineComponent(request.InlineAmbientSound, StoreCategory.AmbientSound);
-    }
 
-    private static void ValidateNoSlotConflict(Guid? existingId, InlineComponentDto? inline, string slotName)
-    {
-        if (existingId.HasValue && existingId != Guid.Empty && inline is not null)
-            throw new ValidationException(
-                $"Cannot specify both a store item ID and an inline component for the {slotName} slot.");
+        if (request.InlineStickers != null)
+        {
+            foreach (var s in request.InlineStickers)
+                ValidateInlineComponent(s, StoreCategory.Sticker);
+        }
+        if (request.InlineBackgrounds != null)
+        {
+            foreach (var b in request.InlineBackgrounds)
+                ValidateInlineComponent(b, StoreCategory.Background);
+        }
+        if (request.InlineEffects != null)
+        {
+            foreach (var e in request.InlineEffects)
+                ValidateInlineComponent(e, StoreCategory.Effect);
+        }
+        if (request.InlineAmbientSounds != null)
+        {
+            foreach (var a in request.InlineAmbientSounds)
+                ValidateInlineComponent(a, StoreCategory.AmbientSound);
+        }
     }
 
     private static void ValidateInlineComponent(InlineComponentDto dto, StoreCategory expectedCategory)
@@ -424,15 +449,75 @@ public class UserThemeService : IUserThemeService
             throw new ValidationException($"Inline {expectedCategory} AssetUrl is required.");
     }
 
-    private static (StoreItem? sticker, StoreItem? background, StoreItem? effect, StoreItem? sound)
-        BuildInlineComponents(Guid userId, SubmitThemeRequestDto request)
+    private async Task<(Guid? firstId, List<StoreItem> itemsToCreate)> ProcessSlotComponentsAsync(
+        Guid? singularId,
+        List<Guid>? multipleIds,
+        InlineComponentDto? singularInline,
+        List<InlineComponentDto>? multipleInlines,
+        StoreCategory category,
+        Guid userId,
+        CancellationToken cancellationToken)
     {
-        return (
-            request.InlineSticker     is not null ? CreateInlineItem(userId, request.InlineSticker)     : null,
-            request.InlineBackground  is not null ? CreateInlineItem(userId, request.InlineBackground)  : null,
-            request.InlineEffect      is not null ? CreateInlineItem(userId, request.InlineEffect)      : null,
-            request.InlineAmbientSound is not null ? CreateInlineItem(userId, request.InlineAmbientSound) : null
-        );
+        var ids = new List<Guid>();
+        if (singularId.HasValue && singularId != Guid.Empty)
+            ids.Add(singularId.Value);
+        if (multipleIds != null)
+            ids.AddRange(multipleIds.Where(id => id != Guid.Empty));
+
+        var inlines = new List<InlineComponentDto>();
+        if (singularInline != null)
+            inlines.Add(singularInline);
+        if (multipleInlines != null)
+            inlines.AddRange(multipleInlines);
+
+        Guid? firstId = null;
+        var itemsToCreate = new List<StoreItem>();
+
+        if (ids.Count > 0)
+        {
+            firstId = ids[0];
+            for (int i = 1; i < ids.Count; i++)
+            {
+                var cloned = await CloneAsInlineComponentAsync(ids[i], userId, cancellationToken);
+                itemsToCreate.Add(cloned);
+            }
+
+            foreach (var inline in inlines)
+            {
+                itemsToCreate.Add(CreateInlineItem(userId, inline));
+            }
+        }
+        else if (inlines.Count > 0)
+        {
+            var firstInlineItem = CreateInlineItem(userId, inlines[0]);
+            itemsToCreate.Add(firstInlineItem);
+            
+            for (int i = 1; i < inlines.Count; i++)
+            {
+                itemsToCreate.Add(CreateInlineItem(userId, inlines[i]));
+            }
+        }
+
+        return (firstId, itemsToCreate);
+    }
+
+    private async Task<StoreItem> CloneAsInlineComponentAsync(Guid originalId, Guid? creatorId, CancellationToken cancellationToken)
+    {
+        var original = await _storeRepository.GetByIdAsync(originalId, cancellationToken)
+            ?? throw new NotFoundException($"Store item '{originalId}' not found.");
+        return new StoreItem
+        {
+            Category = original.Category,
+            ThemeSource = null,
+            Name = original.Name,
+            Description = original.Description,
+            AssetUrl = original.AssetUrl,
+            PreviewUrl = original.PreviewUrl,
+            IsPremium = original.IsPremium,
+            IsActive = creatorId == null || creatorId == Guid.Empty,
+            CreatorId = creatorId,
+            Status = creatorId == null || creatorId == Guid.Empty ? StoreItemStatus.AdminCreated : StoreItemStatus.PendingReview
+        };
     }
 
     private static StoreItem CreateInlineItem(Guid userId, InlineComponentDto dto) =>
@@ -448,36 +533,7 @@ public class UserThemeService : IUserThemeService
             IsActive = false,
             CreatorId = userId,
             Status = StoreItemStatus.PendingReview
-            // ParentThemeId will be set after the Theme is saved and gets an Id
         };
-
-    /// <summary>
-    /// Returns the ID to use for a theme slot.
-    /// If an inline component is provided, use a placeholder Guid that will be replaced after save.
-    /// If an existing store item ID is provided, use that directly.
-    /// </summary>
-    private static Guid? ResolveSlot(Guid? existingId, StoreItem? inlineItem)
-    {
-        if (inlineItem is not null) return null; // will be resolved after SaveChanges
-        if (existingId == Guid.Empty) return null;
-        return existingId;
-    }
-
-    private static void ValidateThemeComponentCount(
-        Guid? stickerItemId,
-        Guid? backgroundItemId,
-        Guid? effectItemId,
-        Guid? soundItemId,
-        int pendingInlineCount = 0)
-    {
-        var provided = new[] { stickerItemId, backgroundItemId, effectItemId, soundItemId }
-            .Count(id => id is not null);
-
-        if (provided + pendingInlineCount < 2)
-            throw new ValidationException(
-                "Theme submissions must include at least 2 different component types " +
-                "(sticker, background, effect, or ambient sound).");
-    }
 
     private async Task<Dictionary<Guid, IReadOnlyList<StoreItem>>> LoadInlineComponentsForThemesAsync(
         List<Guid> themeIds,
