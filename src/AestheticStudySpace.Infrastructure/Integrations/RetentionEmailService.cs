@@ -129,6 +129,11 @@ public class RetentionEmailService : IRetentionEmailService
                     font-weight: 700;
                     font-style: normal;
                 }}
+                @font-face {{
+                    font-family: 'Manrope';
+                    src: url('{fontBaseUrl}/fonts/Manrope-VariableFont_wght.ttf') format('truetype');
+                    font-weight: 200 800;
+                }}
                 body {{
                     font-family: 'HarmonyOS Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                     background-color: #0C0F0F;
@@ -154,17 +159,17 @@ public class RetentionEmailService : IRetentionEmailService
                     padding: 44px 40px 20px 40px;
                     text-align: center;
                 }}
-                .logo {{
-                    font-size: 13px;
-                    font-weight: 700;
-                    letter-spacing: 2px;
-                    text-transform: uppercase;
-                    color: #00F0C2;
+                .logo-container {{
+                    text-align: center;
                     margin-bottom: 24px;
+                }}
+                .logo-text {{
+                    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-size: 28px;
+                    font-weight: 500;
+                    color: #FFFFFF;
+                    letter-spacing: -0.5px;
                     display: inline-block;
-                    background: rgba(0, 240, 194, 0.1);
-                    padding: 6px 16px;
-                    border-radius: 30px;
                 }}
                 .header h1 {{
                     margin: 0;
@@ -258,7 +263,9 @@ public class RetentionEmailService : IRetentionEmailService
             <div class='wrapper'>
                 <div class='container'>
                     <div class='header'>
-                        <div class='logo'>🎧 AESTHETIC STUDY SPACE</div>
+                        <div class='logo-container'>
+                            <span class='logo-text'>Aēsthetic Space</span>
+                        </div>
                         <h1>Đã 7 ngày rồi, bàn học của bạn đang trống...</h1>
                     </div>
                     <div class='content'>

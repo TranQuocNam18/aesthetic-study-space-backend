@@ -221,11 +221,28 @@ public class AuthService : IAuthService
             font-weight: 700;
             font-style: normal;
         }
+        @font-face {
+            font-family: 'Manrope';
+            src: url('{{fontBaseUrl}}/fonts/Manrope-VariableFont_wght.ttf') format('truetype');
+            font-weight: 200 800;
+        }
         body {
             font-family: 'HarmonyOS Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: #0C0F0F;
             color: #FFFFFF;
             padding: 30px;
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .logo-text {
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 28px;
+            font-weight: 500;
+            color: #FFFFFF;
+            letter-spacing: -0.5px;
+            display: inline-block;
         }
         a {
             color: #00F0C2;
@@ -233,7 +250,10 @@ public class AuthService : IAuthService
     </style>
 </head>
 <body>
-    <p>You requested a password reset for <strong>Aesthetic Study Space</strong>.</p>
+    <div class="logo-container">
+        <span class="logo-text">Aēsthetic Space</span>
+    </div>
+    <p>You requested a password reset for <strong>Aēsthetic Space</strong>.</p>
     <p>Reset link (valid for 30 minutes):</p>
     <p><a href="{{link}}">{{link}}</a></p>
     <p>If you didn't request this, you can ignore this email.</p>
