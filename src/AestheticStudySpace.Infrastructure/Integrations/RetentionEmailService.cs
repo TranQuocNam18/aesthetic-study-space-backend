@@ -28,12 +28,13 @@ public class RetentionEmailService : IRetentionEmailService
 
         // Find users who:
         // 1. Are not banned.
-        // 2. Last logged in at least 7 days ago.
-        // 3. Haven't received a retention email since their last login.
+        // 2. Last activity (LastLoginAt, fallback to CreatedAt if never logged in) is at least 7 days ago.
+        // 3. Haven't received a retention email since their last activity.
         var inactiveUsers = await _context.Users
             .Where(u => !u.IsBanned)
-            .Where(u => u.LastLoginAt != null && u.LastLoginAt <= cutoffDate)
-            .Where(u => u.LastRetentionEmailSentAt == null || u.LastRetentionEmailSentAt < u.LastLoginAt)
+            .Where(u => (u.LastLoginAt ?? u.CreatedAt) <= cutoffDate)
+            .Where(u => u.LastRetentionEmailSentAt == null || u.LastRetentionEmailSentAt < (u.LastLoginAt ?? u.CreatedAt))
+            .Take(20) // Giới hạn tối đa 20 email mỗi lần chạy để bảo vệ tài khoản Resend Free tier (tối đa 100/ngày)
             .ToListAsync(cancellationToken);
 
         if (!inactiveUsers.Any())
