@@ -18,6 +18,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.CoinsBalance).HasDefaultValue(0);
         builder.Property(u => u.IsBanned).HasDefaultValue(false);
         builder.Property(u => u.LastLoginAt);
+        builder.Property(u => u.LastRetentionEmailSentAt);
 
         builder.HasOne(u => u.Role)
             .WithMany(r => r.Users)

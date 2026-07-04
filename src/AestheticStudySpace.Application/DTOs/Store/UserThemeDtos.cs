@@ -41,7 +41,15 @@ public record SubmitThemeRequestDto(
     InlineComponentDto? InlineAmbientSound,
     // ── Pricing ──────────────────────────────────────────────────────────────
     int? CoinPrice,
-    long? RealMoneyPriceVnd);
+    long? RealMoneyPriceVnd,
+    List<Guid>? ThemeStickerItemIds = null,
+    List<Guid>? ThemeBackgroundItemIds = null,
+    List<Guid>? ThemeEffectItemIds = null,
+    List<Guid>? ThemeAmbientSoundItemIds = null,
+    List<InlineComponentDto>? InlineStickers = null,
+    List<InlineComponentDto>? InlineBackgrounds = null,
+    List<InlineComponentDto>? InlineEffects = null,
+    List<InlineComponentDto>? InlineAmbientSounds = null);
 
 /// <summary>Response DTO showing one of the user's submitted themes.</summary>
 public record UserThemeSubmissionDto(
@@ -75,11 +83,19 @@ public record PatchThemeRequestDto(
     Guid? ThemeBackgroundItemId = null,
     Guid? ThemeEffectItemId = null,
     Guid? ThemeAmbientSoundItemId = null,
+    List<Guid>? ThemeStickerItemIds = null,
+    List<Guid>? ThemeBackgroundItemIds = null,
+    List<Guid>? ThemeEffectItemIds = null,
+    List<Guid>? ThemeAmbientSoundItemIds = null,
     // ── Inline components ─────────────────────────────────────────────────────
     InlineComponentDto? InlineSticker = null,
     InlineComponentDto? InlineBackground = null,
     InlineComponentDto? InlineEffect = null,
     InlineComponentDto? InlineAmbientSound = null,
+    List<InlineComponentDto>? InlineStickers = null,
+    List<InlineComponentDto>? InlineBackgrounds = null,
+    List<InlineComponentDto>? InlineEffects = null,
+    List<InlineComponentDto>? InlineAmbientSounds = null,
     // ── Pricing ───────────────────────────────────────────────────────────────
     int? CoinPrice = null,
     long? RealMoneyPriceVnd = null);

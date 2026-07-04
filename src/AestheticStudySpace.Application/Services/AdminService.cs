@@ -3,6 +3,7 @@ using AestheticStudySpace.Application.DTOs.Admin;
 using AestheticStudySpace.Application.Interfaces;
 using AestheticStudySpace.Application.Interfaces.Repositories;
 using AestheticStudySpace.Application.Interfaces.Services;
+using AestheticStudySpace.Domain.Entities;
 using AestheticStudySpace.Domain.Enums;
 using AestheticStudySpace.Domain.Exceptions;
 
@@ -16,6 +17,7 @@ public class AdminService : IAdminService
     private readonly IPaymentTransactionRepository _paymentTxRepository;
     private readonly IPomodoroRepository _pomodoroRepository;
     private readonly ITodoRepository _todoRepository;
+    private readonly IPaymentFulfillmentService _fulfillmentService;
     private readonly IUnitOfWork _unitOfWork;
 
     public AdminService(
@@ -25,6 +27,7 @@ public class AdminService : IAdminService
         IPaymentTransactionRepository paymentTxRepository,
         IPomodoroRepository pomodoroRepository,
         ITodoRepository todoRepository,
+        IPaymentFulfillmentService fulfillmentService,
         IUnitOfWork unitOfWork)
     {
         _adminRepository = adminRepository;
@@ -33,6 +36,7 @@ public class AdminService : IAdminService
         _paymentTxRepository = paymentTxRepository;
         _pomodoroRepository = pomodoroRepository;
         _todoRepository = todoRepository;
+        _fulfillmentService = fulfillmentService;
         _unitOfWork = unitOfWork;
     }
 
@@ -117,7 +121,70 @@ public class AdminService : IAdminService
     public Task<IReadOnlyList<AdminRevenueTrendDto>> GetRevenueTrendAsync(int days, CancellationToken cancellationToken = default) =>
         _analyticsRepository.GetRevenueTrendAsync(days, cancellationToken);
 
+    public async Task<PagedResult<AdminPaymentTransactionDto>> GetPaymentsAsync(
+        string? search,
+        PaymentProvider? provider,
+        PaymentStatus? status,
+        PaymentPurpose? purpose,
+        DateTime? fromDate,
+        DateTime? toDate,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var (payments, total) = await _adminRepository.GetPaymentsAsync(search, provider, status, purpose, fromDate, toDate, page, pageSize, cancellationToken);
+        return new PagedResult<AdminPaymentTransactionDto>
+        {
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total,
+            Items = payments.Select(ToPaymentDto).ToList()
+        };
+    }
+
+    public async Task<AdminPaymentTransactionDto> GetPaymentByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var tx = await _adminRepository.GetPaymentByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Payment transaction not found.");
+        return ToPaymentDto(tx);
+    }
+
+    public async Task ManualFulfillPaymentAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var tx = await _adminRepository.GetPaymentByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Payment transaction not found.");
+
+        if (tx.Status != PaymentStatus.Succeeded)
+        {
+            tx.Status = PaymentStatus.Succeeded;
+            tx.SucceededAt = DateTime.UtcNow;
+            await _paymentTxRepository.UpdateAsync(tx, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        await _fulfillmentService.FulfillIfNeededAsync(tx, cancellationToken);
+    }
+
     private static AdminUserDto ToDto(Domain.Entities.User u) =>
         new(u.Id, u.Username, u.Email, u.Role.Name, u.AccountTier.ToString(), u.IsBanned, u.CoinsBalance, u.CreatedAt, u.LastLoginAt);
+
+    private static AdminPaymentTransactionDto ToPaymentDto(PaymentTransaction tx) =>
+        new(
+            tx.Id,
+            tx.UserId,
+            tx.User?.Username ?? string.Empty,
+            tx.User?.Email ?? string.Empty,
+            tx.Provider,
+            tx.Status,
+            tx.Purpose,
+            tx.TransactionCode,
+            tx.Amount,
+            tx.Currency,
+            tx.ProviderPayloadJson,
+            tx.MetadataJson,
+            tx.IsFulfilled,
+            tx.SucceededAt,
+            tx.FailedAt,
+            tx.CreatedAt);
 }
 

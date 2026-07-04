@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
         services.Configure<VnPaySettings>(configuration.GetSection(VnPaySettings.SectionName));
         services.Configure<PayOsSettings>(configuration.GetSection(PayOsSettings.SectionName));
+        services.Configure<GeminiSettings>(configuration.GetSection(GeminiSettings.SectionName));
 
         // PayOS SDK client (singleton — thread-safe)
         var payOsSection = configuration.GetSection(PayOsSettings.SectionName);
@@ -77,6 +78,13 @@ public static class DependencyInjection
         services.AddHttpClient<ResendEmailSender>();
         services.AddScoped<IEmailSender, ResendEmailSender>();
 
+        // AI Services (Gemini)
+        services.AddHttpClient<GeminiService>();
+        services.AddScoped<IAiService, GeminiService>();
+
+        // Retention Email Service
+        services.AddScoped<IRetentionEmailService, RetentionEmailService>();
+
         var jwt = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are not configured.");
 
@@ -112,6 +120,7 @@ public static class DependencyInjection
         services.AddAuthorization();
         services.AddHostedService<MissionResetWorker>();
         services.AddHostedService<SubscriptionExpirationWorker>();
+        services.AddHostedService<RetentionEmailWorker>();
 
         return services;
     }

@@ -15,6 +15,7 @@ public class User : BaseEntity
     public int CoinsBalance { get; set; }
     public bool IsBanned { get; set; }
     public DateTime? LastLoginAt { get; set; }
+    public DateTime? LastRetentionEmailSentAt { get; set; }
 
     public ICollection<UserRoomConfig> RoomConfigs { get; set; } = new List<UserRoomConfig>();
     public ICollection<Todo> Todos { get; set; } = new List<Todo>();

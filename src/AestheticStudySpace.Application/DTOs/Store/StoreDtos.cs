@@ -20,7 +20,8 @@ public record StoreItemDto(
     bool IsActive,
     bool? IsOwned = null,
     bool CanBuyWithCoins = false,
-    bool CanBuyWithMoney = false);
+    bool CanBuyWithMoney = false,
+    IReadOnlyList<StoreItemDto>? Components = null);
 
 public record UserInventoryItemDto(
     Guid InventoryId,
@@ -62,6 +63,7 @@ public record PurchaseHistoryItemDto(
     string Currency,
     PaymentProvider? PaymentProvider,
     string? TransactionCode,
+    PaymentStatus? Status,
     Guid? StoreItemId,
     StoreCategory? StoreCategory,
     StoreThemeSource? ThemeSource,

@@ -166,6 +166,8 @@ public class PaymentService : IPaymentService
         var tx = await _paymentTxRepo.GetByTransactionCodeAsync(txRef, cancellationToken)
             ?? throw new NotFoundException("Transaction not found.");
 
+        if (tx.Status != PaymentStatus.Pending) return;
+
         query.TryGetValue("vnp_ResponseCode", out var responseCode);
         if (responseCode == "00")
         {

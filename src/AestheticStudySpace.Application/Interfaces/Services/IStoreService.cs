@@ -28,6 +28,9 @@ public interface IStoreService
     Task<PagedResult<PurchaseHistoryItemDto>> GetPurchaseHistoryAsync(
         Guid userId,
         PurchaseHistoryKind? kind,
+        PaymentStatus? status,
+        DateTime? fromDate,
+        DateTime? toDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);

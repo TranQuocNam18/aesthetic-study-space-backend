@@ -106,11 +106,14 @@ public class StoreController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<PagedResult<PurchaseHistoryItemDto>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<PagedResult<PurchaseHistoryItemDto>>>> GetMyPurchases(
         [FromQuery] PurchaseHistoryKind? kind,
+        [FromQuery] PaymentStatus? status,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var history = await _storeService.GetPurchaseHistoryAsync(User.GetUserId(), kind, page, pageSize, cancellationToken);
+        var history = await _storeService.GetPurchaseHistoryAsync(User.GetUserId(), kind, status, fromDate, toDate, page, pageSize, cancellationToken);
         return Ok(ApiResponse<PagedResult<PurchaseHistoryItemDto>>.Ok(history));
     }
 
@@ -130,10 +133,13 @@ public class StoreController : ControllerBase
     [Authorize]
     public Task<ActionResult<ApiResponse<PagedResult<PurchaseHistoryItemDto>>>> GetPurchasesLegacy(
         [FromQuery] PurchaseHistoryKind? kind,
+        [FromQuery] PaymentStatus? status,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default) =>
-        GetMyPurchases(kind, page, pageSize, cancellationToken);
+        GetMyPurchases(kind, status, fromDate, toDate, page, pageSize, cancellationToken);
 
     // ── Purchasing ─────────────────────────────────────────────────────────────
 
