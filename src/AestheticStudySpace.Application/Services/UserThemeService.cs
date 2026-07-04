@@ -13,15 +13,18 @@ public class UserThemeService : IUserThemeService
 {
     private readonly IStoreRepository _storeRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IMissionService _missionService;
     private readonly IUnitOfWork _unitOfWork;
 
     public UserThemeService(
         IStoreRepository storeRepository,
         IUserRepository userRepository,
+        IMissionService missionService,
         IUnitOfWork unitOfWork)
     {
         _storeRepository = storeRepository;
         _userRepository = userRepository;
+        _missionService = missionService;
         _unitOfWork = unitOfWork;
     }
 
@@ -118,6 +121,9 @@ public class UserThemeService : IUserThemeService
 
         await _storeRepository.UpdateStoreItemAsync(theme, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Trigger mission: Share layout
+        await _missionService.IncrementByTriggerKeyAsync(userId, "share_layout", 1, cancellationToken);
 
         return ToDto(theme, allItemsToCreate);
     }

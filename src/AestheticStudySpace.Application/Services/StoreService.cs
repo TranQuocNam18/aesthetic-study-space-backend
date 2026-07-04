@@ -14,13 +14,20 @@ public class StoreService : IStoreService
     private readonly IUserRepository _userRepository;
     private readonly IStoreRepository _storeRepository;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
+    private readonly IMissionService _missionService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public StoreService(IUserRepository userRepository, IStoreRepository storeRepository, ICoinTransactionRepository coinTransactionRepository, IUnitOfWork unitOfWork)
+    public StoreService(
+        IUserRepository userRepository, 
+        IStoreRepository storeRepository, 
+        ICoinTransactionRepository coinTransactionRepository, 
+        IMissionService missionService,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _storeRepository = storeRepository;
         _coinTransactionRepository = coinTransactionRepository;
+        _missionService = missionService;
         _unitOfWork = unitOfWork;
     }
 
@@ -140,6 +147,9 @@ public class StoreService : IStoreService
             UserId = userId,
             StoreItemId = item.Id
         }, cancellationToken);
+
+        // Trigger mission: Buy store item
+        await _missionService.IncrementByTriggerKeyAsync(userId, "buy_store_item", 1, cancellationToken);
 
         await _coinTransactionRepository.AddAsync(new CoinTransaction
         {

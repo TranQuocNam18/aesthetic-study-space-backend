@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace AestheticStudySpace.Infrastructure.Persistence.Migrations
+namespace AestheticStudySpace.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class AddUserLastRetentionEmailSentAt : Migration

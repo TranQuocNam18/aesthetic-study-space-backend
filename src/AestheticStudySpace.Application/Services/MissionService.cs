@@ -103,7 +103,26 @@ public class MissionService : IMissionService
 
         var missions = await _missionRepository.GetActiveByTriggerKeyAsync(triggerKey.Trim(), cancellationToken);
         foreach (var mission in missions)
-            await IncrementAsync(userId, mission.Id, delta, cancellationToken);
+        {
+            if (string.Equals(mission.TriggerKey, "long_focus_session", StringComparison.OrdinalIgnoreCase))
+            {
+                if (mission.TargetValue.HasValue && delta >= mission.TargetValue.Value)
+                {
+                    var period = MissionPeriodHelper.GetPeriodDate(mission.Frequency);
+                    var um = await _userMissionRepository.GetForPeriodAsync(userId, mission.Id, period, cancellationToken);
+                    var currentProgress = um?.ProgressValue ?? 0;
+                    if (currentProgress < mission.TargetValue.Value)
+                    {
+                        var needed = mission.TargetValue.Value - currentProgress;
+                        await IncrementAsync(userId, mission.Id, needed, cancellationToken);
+                    }
+                }
+            }
+            else
+            {
+                await IncrementAsync(userId, mission.Id, delta, cancellationToken);
+            }
+        }
     }
 
     public async Task<UserMissionDto> ClaimAsync(Guid userId, Guid missionId, CancellationToken cancellationToken = default)
