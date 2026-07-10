@@ -52,6 +52,29 @@ public class UserComponentService : IUserComponentService
         if (user.IsBanned)
             throw new UnauthorizedException("Banned users cannot submit components.");
 
+        // Resolve bank details
+        string? bankNumber = request.BankAccountNumber?.Trim();
+        string? bankName = request.BankName?.Trim();
+        string? bankOwner = request.BankAccountOwnerName?.Trim();
+
+        if (string.IsNullOrEmpty(bankNumber) || string.IsNullOrEmpty(bankName))
+        {
+            if (string.IsNullOrEmpty(user.DefaultBankAccountNumber) || string.IsNullOrEmpty(user.DefaultBankName))
+            {
+                throw new ValidationException("Bank account details (number and bank name) are required for your first submission.");
+            }
+            bankNumber = user.DefaultBankAccountNumber;
+            bankName = user.DefaultBankName;
+            bankOwner = user.DefaultBankAccountOwnerName;
+        }
+        else
+        {
+            user.DefaultBankAccountNumber = bankNumber;
+            user.DefaultBankName = bankName;
+            user.DefaultBankAccountOwnerName = bankOwner;
+            await _userRepository.UpdateAsync(user, cancellationToken);
+        }
+
         var item = new StoreItem
         {
             Category = request.Category,
@@ -67,9 +90,9 @@ public class UserComponentService : IUserComponentService
             CreatorId = userId,
             Status = StoreItemStatus.PendingTransaction,
             ParentThemeId = null,    // standalone submission
-            BankAccountNumber = request.BankAccountNumber?.Trim(),
-            BankName = request.BankName?.Trim(),
-            BankAccountOwnerName = request.BankAccountOwnerName?.Trim(),
+            BankAccountNumber = bankNumber,
+            BankName = bankName,
+            BankAccountOwnerName = bankOwner,
             RequestedCoinPrice = request.RequestedCoinPrice,
             RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd
         };

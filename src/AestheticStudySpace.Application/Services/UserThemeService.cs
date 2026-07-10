@@ -76,6 +76,29 @@ public class UserThemeService : IUserThemeService
         if (providedCount < 2)
             throw new ValidationException("Theme submissions must include at least 2 different component types (sticker, background, effect, or ambient sound).");
 
+        // Resolve bank details
+        string? bankNumber = request.BankAccountNumber?.Trim();
+        string? bankName = request.BankName?.Trim();
+        string? bankOwner = request.BankAccountOwnerName?.Trim();
+
+        if (string.IsNullOrEmpty(bankNumber) || string.IsNullOrEmpty(bankName))
+        {
+            if (string.IsNullOrEmpty(user.DefaultBankAccountNumber) || string.IsNullOrEmpty(user.DefaultBankName))
+            {
+                throw new ValidationException("Bank account details (number and bank name) are required for your first submission.");
+            }
+            bankNumber = user.DefaultBankAccountNumber;
+            bankName = user.DefaultBankName;
+            bankOwner = user.DefaultBankAccountOwnerName;
+        }
+        else
+        {
+            user.DefaultBankAccountNumber = bankNumber;
+            user.DefaultBankName = bankName;
+            user.DefaultBankAccountOwnerName = bankOwner;
+            await _userRepository.UpdateAsync(user, cancellationToken);
+        }
+
         // Create the Theme StoreItem
         var theme = new StoreItem
         {
@@ -95,9 +118,9 @@ public class UserThemeService : IUserThemeService
             IsActive = false,
             CreatorId = userId,
             Status = StoreItemStatus.PendingTransaction,
-            BankAccountNumber = request.BankAccountNumber?.Trim(),
-            BankName = request.BankName?.Trim(),
-            BankAccountOwnerName = request.BankAccountOwnerName?.Trim(),
+            BankAccountNumber = bankNumber,
+            BankName = bankName,
+            BankAccountOwnerName = bankOwner,
             RequestedCoinPrice = request.RequestedCoinPrice,
             RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd
         };

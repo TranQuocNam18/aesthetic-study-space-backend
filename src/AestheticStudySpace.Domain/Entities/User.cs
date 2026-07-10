@@ -17,6 +17,10 @@ public class User : BaseEntity
     public DateTime? LastLoginAt { get; set; }
     public DateTime? LastRetentionEmailSentAt { get; set; }
 
+    public string? DefaultBankAccountNumber { get; set; }
+    public string? DefaultBankName { get; set; }
+    public string? DefaultBankAccountOwnerName { get; set; }
+
     public ICollection<UserRoomConfig> RoomConfigs { get; set; } = new List<UserRoomConfig>();
     public ICollection<Todo> Todos { get; set; } = new List<Todo>();
     public ICollection<PomodoroSession> PomodoroSessions { get; set; } = new List<PomodoroSession>();

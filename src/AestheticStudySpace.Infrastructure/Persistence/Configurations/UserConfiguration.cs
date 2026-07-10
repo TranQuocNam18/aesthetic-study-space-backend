@@ -1,4 +1,5 @@
 using AestheticStudySpace.Domain.Entities;
+using AestheticStudySpace.Infrastructure.Persistence.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -19,6 +20,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsBanned).HasDefaultValue(false);
         builder.Property(u => u.LastLoginAt);
         builder.Property(u => u.LastRetentionEmailSentAt);
+
+        builder.Property(u => u.DefaultBankAccountNumber).HasMaxLength(500)
+            .HasConversion(v => EncryptionHelper.Encrypt(v), v => EncryptionHelper.Decrypt(v));
+        builder.Property(u => u.DefaultBankName).HasMaxLength(100);
+        builder.Property(u => u.DefaultBankAccountOwnerName).HasMaxLength(500)
+            .HasConversion(v => EncryptionHelper.Encrypt(v), v => EncryptionHelper.Decrypt(v));
 
         builder.HasOne(u => u.Role)
             .WithMany(r => r.Users)
