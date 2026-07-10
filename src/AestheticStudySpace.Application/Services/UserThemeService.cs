@@ -192,6 +192,9 @@ public class UserThemeService : IUserThemeService
         if (item.Status == StoreItemStatus.Approved)
             throw new ValidationException("Cannot withdraw an approved theme that is live in the store.");
 
+        if (item.Status == StoreItemStatus.PurchasedPendingPricing)
+            throw new ValidationException("Cannot withdraw a theme that has already been bought out by the admin.");
+
         var now = DateTime.UtcNow;
         item.IsDeleted = true;
         item.DeletedAt = now;

@@ -92,5 +92,18 @@ public class AdminUsersController : ControllerBase
         }
         return Ok(ApiResponse<object>.Ok(new { success = true, message = "Successfully sent manual test email." }));
     }
+
+    /// <summary>
+    /// Cộng thêm coin cho một user (phục vụ giao dịch mua đứt với creator).
+    /// </summary>
+    [HttpPost("{id:guid}/add-coins")]
+    public async Task<ActionResult<ApiResponse<object>>> AddCoins(
+        [FromRoute] Guid id,
+        [FromBody] AddCoinsRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        await _adminService.AddCoinsToUserAsync(id, request.Amount, cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { success = true, message = $"Successfully added {request.Amount} coins to user." }));
+    }
 }
 

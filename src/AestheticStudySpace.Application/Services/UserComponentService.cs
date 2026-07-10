@@ -131,6 +131,9 @@ public class UserComponentService : IUserComponentService
         if (item.Status == StoreItemStatus.Approved)
             throw new ValidationException("Cannot withdraw an approved component that is live in the store.");
 
+        if (item.Status == StoreItemStatus.PurchasedPendingPricing)
+            throw new ValidationException("Cannot withdraw a component that has already been bought out by the admin.");
+
         item.IsDeleted = true;
         item.DeletedAt = DateTime.UtcNow;
         item.UpdatedAt = DateTime.UtcNow;

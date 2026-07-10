@@ -18,6 +18,7 @@ public class AdminService : IAdminService
     private readonly IPomodoroRepository _pomodoroRepository;
     private readonly ITodoRepository _todoRepository;
     private readonly IPaymentFulfillmentService _fulfillmentService;
+    private readonly ICoinTransactionRepository _coinTransactionRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public AdminService(
@@ -28,6 +29,7 @@ public class AdminService : IAdminService
         IPomodoroRepository pomodoroRepository,
         ITodoRepository todoRepository,
         IPaymentFulfillmentService fulfillmentService,
+        ICoinTransactionRepository coinTransactionRepository,
         IUnitOfWork unitOfWork)
     {
         _adminRepository = adminRepository;
@@ -37,6 +39,7 @@ public class AdminService : IAdminService
         _pomodoroRepository = pomodoroRepository;
         _todoRepository = todoRepository;
         _fulfillmentService = fulfillmentService;
+        _coinTransactionRepository = coinTransactionRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -163,6 +166,28 @@ public class AdminService : IAdminService
         }
 
         await _fulfillmentService.FulfillIfNeededAsync(tx, cancellationToken);
+    }
+
+    public async Task AddCoinsToUserAsync(Guid id, int amount, CancellationToken cancellationToken = default)
+    {
+        if (amount <= 0)
+            throw new ValidationException("Amount of coins to add must be greater than zero.");
+
+        var user = await _userRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("User not found.");
+
+        user.CoinsBalance += amount;
+        await _userRepository.UpdateAsync(user, cancellationToken);
+
+        await _coinTransactionRepository.AddAsync(new CoinTransaction
+        {
+            UserId = user.Id,
+            Type = CoinTransactionType.Earned,
+            Amount = amount,
+            Reason = "AdminManualCredit"
+        }, cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     private static AdminUserDto ToDto(Domain.Entities.User u) =>

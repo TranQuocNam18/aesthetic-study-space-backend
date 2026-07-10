@@ -82,71 +82,7 @@ public class AdminStoreItemsController : ControllerBase
 
 
 
-    [HttpGet("pending")]
-    public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPendingSubmissions(
-        [FromQuery] StoreCategory? category = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _adminStoreService.GetPendingSubmissionsAsync(category, page, pageSize, cancellationToken);
-        return Ok(ApiResponse<PagedResult<AdminStoreItemDto>>.Ok(result));
-    }
 
-    /// <summary>
-    /// Approve a user-submitted Theme.
-    /// </summary>
-    [HttpPost("{id:guid}/approve")]
-    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> ApproveTheme(
-        Guid id,
-        [FromBody] ApproveThemeRequestDto request,
-        CancellationToken cancellationToken = default)
-    {
-        var item = await _adminStoreService.ApprovePendingThemeAsync(id, request, cancellationToken);
-        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Theme approved and is now visible in the store."));
-    }
-
-    /// <summary>
-    /// Reject a user-submitted Theme combo.
-    /// A rejection note explaining the reason is required.
-    /// </summary>
-    [HttpPost("{id:guid}/reject")]
-    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> RejectTheme(
-        Guid id,
-        [FromBody] RejectThemeRequestDto request,
-        CancellationToken cancellationToken = default)
-    {
-        var item = await _adminStoreService.RejectPendingThemeAsync(id, request, cancellationToken);
-        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Theme rejected."));
-    }
-
-    /// <summary>
-    /// Approve a user-submitted standalone component (Sticker / Background / Effect / AmbientSound).
-    /// Admin can optionally adjust pricing before approving.
-    /// </summary>
-    [HttpPost("{id:guid}/approve-component")]
-    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> ApproveComponent(
-        Guid id,
-        [FromBody] ApproveComponentRequestDto request,
-        CancellationToken cancellationToken = default)
-    {
-        var item = await _adminStoreService.ApprovePendingComponentAsync(id, request, cancellationToken);
-        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Component approved and is now visible in the store."));
-    }
-
-    /// <summary>
-    /// Reject a user-submitted standalone component (Sticker / Background / Effect / AmbientSound).
-    /// Sets status to Rejected, item stays hidden. A rejection note is required.
-    /// </summary>
-    [HttpPost("{id:guid}/reject-component")]
-    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> RejectComponent(
-        Guid id,
-        [FromBody] RejectThemeRequestDto request,
-        CancellationToken cancellationToken = default)
-    {
-        var item = await _adminStoreService.RejectPendingComponentAsync(id, request, cancellationToken);
-        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Component rejected."));
-    }
 
     // ── Creator Buyout Transaction & Pricing Pool Workflow ─────────────────────
 
