@@ -14,17 +14,20 @@ public class UserThemeService : IUserThemeService
     private readonly IStoreRepository _storeRepository;
     private readonly IUserRepository _userRepository;
     private readonly IMissionService _missionService;
+    private readonly INotificationService _notificationService;
     private readonly IUnitOfWork _unitOfWork;
 
     public UserThemeService(
         IStoreRepository storeRepository,
         IUserRepository userRepository,
         IMissionService missionService,
+        INotificationService notificationService,
         IUnitOfWork unitOfWork)
     {
         _storeRepository = storeRepository;
         _userRepository = userRepository;
         _missionService = missionService;
+        _notificationService = notificationService;
         _unitOfWork = unitOfWork;
     }
 
@@ -91,7 +94,12 @@ public class UserThemeService : IUserThemeService
             RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null,
             IsActive = false,
             CreatorId = userId,
-            Status = StoreItemStatus.PendingReview
+            Status = StoreItemStatus.PendingTransaction,
+            BankAccountNumber = request.BankAccountNumber?.Trim(),
+            BankName = request.BankName?.Trim(),
+            BankAccountOwnerName = request.BankAccountOwnerName?.Trim(),
+            RequestedCoinPrice = request.RequestedCoinPrice,
+            RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd
         };
 
         await _storeRepository.AddStoreItemAsync(theme, cancellationToken);
@@ -124,6 +132,14 @@ public class UserThemeService : IUserThemeService
 
         // Trigger mission: Share layout
         await _missionService.IncrementByTriggerKeyAsync(userId, "share_layout", 1, cancellationToken);
+
+        // Create Web Notification for admin
+        await _notificationService.CreateNotificationAsync(
+            userId: null,
+            isForAdmin: true,
+            title: "New Theme Transaction Request",
+            message: $"User {user.Username} submitted theme '{theme.Name}' for buyout transaction.",
+            cancellationToken);
 
         return ToDto(theme, allItemsToCreate);
     }
@@ -210,6 +226,9 @@ public class UserThemeService : IUserThemeService
         if (item.Status == StoreItemStatus.Approved)
             throw new ValidationException("Cannot update an approved theme that is live in the store.");
 
+        if (item.Status == StoreItemStatus.PendingTransaction || item.Status == StoreItemStatus.PurchasedPendingPricing)
+            throw new ValidationException("Cannot update a theme request that is currently pending transaction review or buyout processing.");
+
         // Soft-delete old inline components before replacing
         var oldInline = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
         var now = DateTime.UtcNow;
@@ -262,7 +281,12 @@ public class UserThemeService : IUserThemeService
         item.ThemeAmbientSoundItemId = soundId;
         item.CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null;
         item.RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null;
-        item.Status = StoreItemStatus.PendingReview;
+        item.Status = StoreItemStatus.PendingTransaction;
+        item.BankAccountNumber = request.BankAccountNumber?.Trim();
+        item.BankName = request.BankName?.Trim();
+        item.BankAccountOwnerName = request.BankAccountOwnerName?.Trim();
+        item.RequestedCoinPrice = request.RequestedCoinPrice;
+        item.RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd;
         item.RejectionNote = null;
         item.UpdatedAt = now;
 
@@ -307,6 +331,9 @@ public class UserThemeService : IUserThemeService
         if (item.Status == StoreItemStatus.Approved)
             throw new ValidationException("Cannot update an approved theme that is live in the store.");
 
+        if (item.Status == StoreItemStatus.PendingTransaction || item.Status == StoreItemStatus.PurchasedPendingPricing)
+            throw new ValidationException("Cannot update a theme request that is currently pending transaction review or buyout processing.");
+
         var now = DateTime.UtcNow;
 
         if (request.Name is not null)
@@ -334,6 +361,21 @@ public class UserThemeService : IUserThemeService
 
         if (request.RealMoneyPriceVnd is not null)
             item.RealMoneyPriceVnd = request.RealMoneyPriceVnd > 0 ? request.RealMoneyPriceVnd : null;
+
+        if (request.BankAccountNumber is not null)
+            item.BankAccountNumber = string.IsNullOrWhiteSpace(request.BankAccountNumber) ? null : request.BankAccountNumber.Trim();
+
+        if (request.BankName is not null)
+            item.BankName = string.IsNullOrWhiteSpace(request.BankName) ? null : request.BankName.Trim();
+
+        if (request.BankAccountOwnerName is not null)
+            item.BankAccountOwnerName = string.IsNullOrWhiteSpace(request.BankAccountOwnerName) ? null : request.BankAccountOwnerName.Trim();
+
+        if (request.RequestedCoinPrice is not null)
+            item.RequestedCoinPrice = request.RequestedCoinPrice > 0 ? request.RequestedCoinPrice : null;
+
+        if (request.RequestedRealMoneyPriceVnd is not null)
+            item.RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd > 0 ? request.RequestedRealMoneyPriceVnd : null;
 
         var patchedInlineItems = new List<StoreItem>();
 
@@ -370,7 +412,7 @@ public class UserThemeService : IUserThemeService
         await HandleInlineSlot(request.InlineEffect, request.InlineEffects, request.ThemeEffectItemId, request.ThemeEffectItemIds, StoreCategory.Effect, () => item.ThemeEffectItemId, v => item.ThemeEffectItemId = v);
         await HandleInlineSlot(request.InlineAmbientSound, request.InlineAmbientSounds, request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds, StoreCategory.AmbientSound, () => item.ThemeAmbientSoundItemId, v => item.ThemeAmbientSoundItemId = v);
 
-        item.Status = StoreItemStatus.PendingReview;
+        item.Status = StoreItemStatus.PendingTransaction;
         item.RejectionNote = null;
         item.UpdatedAt = now;
 
@@ -408,6 +450,9 @@ public class UserThemeService : IUserThemeService
 
     private static void ValidateThemeRequest(SubmitThemeRequestDto request)
     {
+        if (!request.IsAgreedToTerms)
+            throw new ValidationException("You must agree to the transaction terms of service before submitting themes.");
+
         if (string.IsNullOrWhiteSpace(request.Name))
             throw new ValidationException("Name is required.");
         if (string.IsNullOrWhiteSpace(request.AssetUrl))
@@ -561,5 +606,8 @@ public class UserThemeService : IUserThemeService
             x.ThemeSource ?? StoreThemeSource.Community,
             x.Status, x.RejectionNote,
             x.CreatedAt, x.ReviewedAt,
-            inlineComponents.Select(UserComponentService.ToDto).ToList());
+            inlineComponents.Select(UserComponentService.ToDto).ToList(),
+            x.BankAccountNumber, x.BankName, x.BankAccountOwnerName,
+            x.RequestedCoinPrice, x.RequestedRealMoneyPriceVnd,
+            x.IsBoughtByAdmin);
 }

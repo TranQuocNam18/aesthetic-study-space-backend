@@ -15,7 +15,13 @@ public record SubmitComponentRequestDto(
     string AssetUrl,
     string? PreviewUrl,
     int? CoinPrice,
-    long? RealMoneyPriceVnd);
+    long? RealMoneyPriceVnd,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsAgreedToTerms = false);
 
 /// <summary>Response DTO showing one of the user's submitted components.</summary>
 public record UserComponentSubmissionDto(
@@ -30,7 +36,13 @@ public record UserComponentSubmissionDto(
     StoreItemStatus Status,
     string? RejectionNote,
     DateTime SubmittedAt,
-    DateTime? ReviewedAt);
+    DateTime? ReviewedAt,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsBoughtByAdmin = false);
 
 /// <summary>Request DTO for partially updating a user's component submission.</summary>
 public record PatchComponentRequestDto(
@@ -39,4 +51,9 @@ public record PatchComponentRequestDto(
     string? AssetUrl = null,
     string? PreviewUrl = null,
     int? CoinPrice = null,
-    long? RealMoneyPriceVnd = null);
+    long? RealMoneyPriceVnd = null,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null);

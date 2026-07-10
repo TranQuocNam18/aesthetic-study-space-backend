@@ -12,11 +12,22 @@ namespace AestheticStudySpace.Application.Services;
 public class AdminStoreService : IAdminStoreService
 {
     private readonly IStoreRepository _storeRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly ICoinTransactionRepository _coinTransactionRepository;
+    private readonly INotificationService _notificationService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public AdminStoreService(IStoreRepository storeRepository, IUnitOfWork unitOfWork)
+    public AdminStoreService(
+        IStoreRepository storeRepository, 
+        IUserRepository userRepository,
+        ICoinTransactionRepository coinTransactionRepository,
+        INotificationService notificationService,
+        IUnitOfWork unitOfWork)
     {
         _storeRepository = storeRepository;
+        _userRepository = userRepository;
+        _coinTransactionRepository = coinTransactionRepository;
+        _notificationService = notificationService;
         _unitOfWork = unitOfWork;
     }
 
@@ -460,7 +471,10 @@ public class AdminStoreService : IAdminStoreService
             x.CoinPrice, x.RealMoneyPriceVnd, x.IsActive,
             x.Status, x.CreatorId, x.Creator?.Username,
             x.RejectionNote, x.ReviewedAt,
-            x.CreatedAt, x.UpdatedAt);
+            x.CreatedAt, x.UpdatedAt,
+            x.BankAccountNumber, x.BankName, x.BankAccountOwnerName,
+            x.RequestedCoinPrice, x.RequestedRealMoneyPriceVnd,
+            x.IsBoughtByAdmin);
 
     private async Task<(Guid? firstId, List<StoreItem> itemsToCreate)> ProcessSlotComponentsAsync(
         Guid? singularId,
@@ -524,5 +538,217 @@ public class AdminStoreService : IAdminStoreService
 
         if (provided + inlineCount < 2)
             throw new ValidationException("Theme items must include at least 2 different component types (sticker, background, effect, or ambient sound).");
+    }
+
+    // ── Creator Buyout Transaction & Pricing Pool Workflow ─────────────────────
+
+    public async Task<PagedResult<AdminStoreItemDto>> GetPendingTransactionsAsync(
+        StoreCategory? category,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var total = await _storeRepository.CountPendingTransactionsAsync(category, cancellationToken);
+        var items = await _storeRepository.GetPendingTransactionsAsync(category, page, pageSize, cancellationToken);
+
+        return new PagedResult<AdminStoreItemDto>
+        {
+            Items = items.Select(ToAdminDto).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task<AdminStoreItemDto> ApproveTransactionAsync(
+        Guid id,
+        AdminApproveTransactionDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _storeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Store item not found.");
+
+        if (item.Status != StoreItemStatus.PendingTransaction)
+            throw new ValidationException("Only items with status 'PendingTransaction' can be approved.");
+
+        var now = DateTime.UtcNow;
+        item.Status = StoreItemStatus.PurchasedPendingPricing;
+        item.IsBoughtByAdmin = true;
+        item.IsActive = false;
+        item.ReviewedAt = now;
+        item.UpdatedAt = now;
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        // If paying in coins and creator requested coins
+        if (request.PayInCoins && item.CreatorId.HasValue)
+        {
+            var creator = await _userRepository.GetByIdAsync(item.CreatorId.Value, cancellationToken);
+            if (creator != null && item.RequestedCoinPrice.HasValue && item.RequestedCoinPrice.Value > 0)
+            {
+                creator.CoinsBalance += item.RequestedCoinPrice.Value;
+                await _userRepository.UpdateAsync(creator, cancellationToken);
+
+                await _coinTransactionRepository.AddAsync(new CoinTransaction
+                {
+                    UserId = creator.Id,
+                    Type = CoinTransactionType.Earned,
+                    Amount = item.RequestedCoinPrice.Value,
+                    Reason = $"BuyoutPayout:{item.Name}"
+                }, cancellationToken);
+            }
+        }
+
+        // Cascade-update all inline components if theme
+        if (item.Category == StoreCategory.Theme)
+        {
+            var inlineComponents = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+            if (inlineComponents.Count > 0)
+            {
+                var inlineIds = inlineComponents.Select(x => x.Id).ToList();
+                await _storeRepository.BulkUpdateStatusAsync(inlineIds, StoreItemStatus.PurchasedPendingPricing, isActive: false, now, cancellationToken);
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Create Web Notification for the creator
+        if (item.CreatorId.HasValue)
+        {
+            await _notificationService.CreateNotificationAsync(
+                userId: item.CreatorId.Value,
+                isForAdmin: false,
+                title: "Transaction Approved",
+                message: $"Your submission request for '{item.Name}' has been approved by Admin.",
+                cancellationToken);
+        }
+
+        return ToAdminDto(item);
+    }
+
+    public async Task<AdminStoreItemDto> RejectTransactionAsync(
+        Guid id,
+        RejectThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.RejectionNote))
+            throw new ValidationException("Rejection note is required.");
+
+        var item = await _storeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Store item not found.");
+
+        if (item.Status != StoreItemStatus.PendingTransaction)
+            throw new ValidationException("Only items with status 'PendingTransaction' can be rejected.");
+
+        var now = DateTime.UtcNow;
+        item.Status = StoreItemStatus.Rejected;
+        item.IsActive = false;
+        item.RejectionNote = request.RejectionNote.Trim();
+        item.ReviewedAt = now;
+        item.UpdatedAt = now;
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        // Cascade-reject all inline components if theme
+        if (item.Category == StoreCategory.Theme)
+        {
+            var inlineComponents = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+            if (inlineComponents.Count > 0)
+            {
+                var inlineIds = inlineComponents.Select(x => x.Id).ToList();
+                await _storeRepository.BulkUpdateStatusAsync(inlineIds, StoreItemStatus.Rejected, isActive: false, now, cancellationToken);
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Create Web Notification for the creator
+        if (item.CreatorId.HasValue)
+        {
+            await _notificationService.CreateNotificationAsync(
+                userId: item.CreatorId.Value,
+                isForAdmin: false,
+                title: "Transaction Rejected",
+                message: $"Your submission request for '{item.Name}' has been rejected. Reason: {request.RejectionNote}",
+                cancellationToken);
+        }
+
+        return ToAdminDto(item);
+    }
+
+    public async Task<PagedResult<AdminStoreItemDto>> GetPurchasedPendingPricingAsync(
+        StoreCategory? category,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var total = await _storeRepository.CountPurchasedPendingPricingAsync(category, cancellationToken);
+        var items = await _storeRepository.GetPurchasedPendingPricingAsync(category, page, pageSize, cancellationToken);
+
+        return new PagedResult<AdminStoreItemDto>
+        {
+            Items = items.Select(ToAdminDto).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task<AdminStoreItemDto> PriceAndPublishAsync(
+        Guid id,
+        AdminPriceAndPublishDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.CoinPrice <= 0)
+            throw new ValidationException("CoinPrice must be greater than zero.");
+
+        var item = await _storeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Store item not found.");
+
+        if (item.Status != StoreItemStatus.PurchasedPendingPricing)
+            throw new ValidationException("Only items in 'PurchasedPendingPricing' status can be published.");
+
+        var now = DateTime.UtcNow;
+        item.CoinPrice = request.CoinPrice;
+        item.IsPremium = request.IsPremium;
+        item.Status = StoreItemStatus.Approved;
+        item.IsActive = true;
+        item.ThemeSource = StoreThemeSource.Community;
+        item.ReviewedAt = now;
+        item.UpdatedAt = now;
+
+        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        // Cascade-approve all inline components if theme
+        if (item.Category == StoreCategory.Theme)
+        {
+            var inlineComponents = await _storeRepository.GetInlineComponentsByThemeIdAsync(id, cancellationToken);
+            if (inlineComponents.Count > 0)
+            {
+                var inlineIds = inlineComponents.Select(x => x.Id).ToList();
+                await _storeRepository.BulkUpdateStatusAsync(inlineIds, StoreItemStatus.Approved, isActive: true, now, cancellationToken);
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Create Web Notification for the creator
+        if (item.CreatorId.HasValue)
+        {
+            await _notificationService.CreateNotificationAsync(
+                userId: item.CreatorId.Value,
+                isForAdmin: false,
+                title: "Asset Published",
+                message: $"Your design '{item.Name}' has been priced and published to the store.",
+                cancellationToken);
+        }
+
+        return ToAdminDto(item);
     }
 }

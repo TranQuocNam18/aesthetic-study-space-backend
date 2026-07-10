@@ -21,4 +21,11 @@ public interface IAdminStoreService
     Task<AdminStoreItemDto> RejectPendingThemeAsync(Guid id, RejectThemeRequestDto request, CancellationToken cancellationToken = default);
     Task<AdminStoreItemDto> ApprovePendingComponentAsync(Guid id, ApproveComponentRequestDto request, CancellationToken cancellationToken = default);
     Task<AdminStoreItemDto> RejectPendingComponentAsync(Guid id, RejectThemeRequestDto request, CancellationToken cancellationToken = default);
+
+    // ── Creator Buyout Transaction & Pricing Pool Workflow ─────────────────────
+    Task<PagedResult<AdminStoreItemDto>> GetPendingTransactionsAsync(StoreCategory? category, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<AdminStoreItemDto> ApproveTransactionAsync(Guid id, AdminApproveTransactionDto request, CancellationToken cancellationToken = default);
+    Task<AdminStoreItemDto> RejectTransactionAsync(Guid id, RejectThemeRequestDto request, CancellationToken cancellationToken = default);
+    Task<PagedResult<AdminStoreItemDto>> GetPurchasedPendingPricingAsync(StoreCategory? category, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<AdminStoreItemDto> PriceAndPublishAsync(Guid id, AdminPriceAndPublishDto request, CancellationToken cancellationToken = default);
 }

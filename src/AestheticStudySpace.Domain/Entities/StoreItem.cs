@@ -27,6 +27,14 @@ public class StoreItem : BaseEntity
 
     public bool IsActive { get; set; } = true;
 
+    // ── Bank Account & Buyout Details ─────────────────────────────────────────
+    public string? BankAccountNumber { get; set; }
+    public string? BankName { get; set; }
+    public string? BankAccountOwnerName { get; set; }
+    public int? RequestedCoinPrice { get; set; }
+    public long? RequestedRealMoneyPriceVnd { get; set; }
+    public bool IsBoughtByAdmin { get; set; }
+
     /// <summary>
     /// Who submitted this item. Null means it was created directly by an Admin.
     /// </summary>

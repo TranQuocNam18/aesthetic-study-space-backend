@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IPomodoroService, PomodoroService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IWelcomeBackService, WelcomeBackService>();
+        services.AddScoped<INotificationService, NotificationService>();
         return services;
     }
 }

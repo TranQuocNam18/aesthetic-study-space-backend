@@ -49,7 +49,13 @@ public record SubmitThemeRequestDto(
     List<InlineComponentDto>? InlineStickers = null,
     List<InlineComponentDto>? InlineBackgrounds = null,
     List<InlineComponentDto>? InlineEffects = null,
-    List<InlineComponentDto>? InlineAmbientSounds = null);
+    List<InlineComponentDto>? InlineAmbientSounds = null,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsAgreedToTerms = false);
 
 /// <summary>Response DTO showing one of the user's submitted themes.</summary>
 public record UserThemeSubmissionDto(
@@ -70,7 +76,13 @@ public record UserThemeSubmissionDto(
     DateTime SubmittedAt,
     DateTime? ReviewedAt,
     /// <summary>Inline components that were created as part of this Theme combo (Luồng C).</summary>
-    IReadOnlyList<UserComponentSubmissionDto> InlineComponents);
+    IReadOnlyList<UserComponentSubmissionDto> InlineComponents,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsBoughtByAdmin = false);
 
 /// <summary>Request DTO for partially updating a user's theme submission.</summary>
 public record PatchThemeRequestDto(
@@ -98,4 +110,9 @@ public record PatchThemeRequestDto(
     List<InlineComponentDto>? InlineAmbientSounds = null,
     // ── Pricing ───────────────────────────────────────────────────────────────
     int? CoinPrice = null,
-    long? RealMoneyPriceVnd = null);
+    long? RealMoneyPriceVnd = null,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null);

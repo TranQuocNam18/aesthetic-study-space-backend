@@ -1,4 +1,5 @@
 using AestheticStudySpace.Domain.Entities;
+using AestheticStudySpace.Infrastructure.Persistence.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -18,6 +19,11 @@ public class StoreItemConfiguration : IEntityTypeConfiguration<StoreItem>
         builder.Property(x => x.AssetUrl).HasMaxLength(2048).IsRequired();
         builder.Property(x => x.PreviewUrl).HasMaxLength(2048);
         builder.Property(x => x.RejectionNote).HasMaxLength(1000);
+        builder.Property(x => x.BankAccountNumber).HasMaxLength(500)
+            .HasConversion(v => EncryptionHelper.Encrypt(v), v => EncryptionHelper.Decrypt(v));
+        builder.Property(x => x.BankName).HasMaxLength(100);
+        builder.Property(x => x.BankAccountOwnerName).HasMaxLength(500)
+            .HasConversion(v => EncryptionHelper.Encrypt(v), v => EncryptionHelper.Decrypt(v));
 
         builder.Property(x => x.IsActive).HasDefaultValue(true);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(30)

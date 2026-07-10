@@ -147,4 +147,58 @@ public class AdminStoreItemsController : ControllerBase
         var item = await _adminStoreService.RejectPendingComponentAsync(id, request, cancellationToken);
         return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Component rejected."));
     }
+
+    // ── Creator Buyout Transaction & Pricing Pool Workflow ─────────────────────
+
+    [HttpGet("pending-transactions")]
+    public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPendingTransactions(
+        [FromQuery] StoreCategory? category = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _adminStoreService.GetPendingTransactionsAsync(category, page, pageSize, cancellationToken);
+        return Ok(ApiResponse<PagedResult<AdminStoreItemDto>>.Ok(result));
+    }
+
+    [HttpPost("{id:guid}/approve-transaction")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> ApproveTransaction(
+        Guid id,
+        [FromBody] AdminApproveTransactionDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.ApproveTransactionAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Transaction approved. Item moved to pricing pool."));
+    }
+
+    [HttpPost("{id:guid}/reject-transaction")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> RejectTransaction(
+        Guid id,
+        [FromBody] RejectThemeRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.RejectTransactionAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Transaction rejected."));
+    }
+
+    [HttpGet("purchased-pending-pricing")]
+    public async Task<ActionResult<ApiResponse<PagedResult<AdminStoreItemDto>>>> GetPurchasedPendingPricing(
+        [FromQuery] StoreCategory? category = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _adminStoreService.GetPurchasedPendingPricingAsync(category, page, pageSize, cancellationToken);
+        return Ok(ApiResponse<PagedResult<AdminStoreItemDto>>.Ok(result));
+    }
+
+    [HttpPost("{id:guid}/price-publish")]
+    public async Task<ActionResult<ApiResponse<AdminStoreItemDto>>> PriceAndPublish(
+        Guid id,
+        [FromBody] AdminPriceAndPublishDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var item = await _adminStoreService.PriceAndPublishAsync(id, request, cancellationToken);
+        return Ok(ApiResponse<AdminStoreItemDto>.Ok(item, "Item has been priced and published successfully to store."));
+    }
 }

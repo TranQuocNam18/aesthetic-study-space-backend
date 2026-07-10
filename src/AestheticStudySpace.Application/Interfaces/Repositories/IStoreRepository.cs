@@ -52,4 +52,10 @@ public interface IStoreRepository
     // ── Admin pending review ───────────────────────────────────────────────────
     Task<int> CountPendingReviewAsync(StoreCategory? category, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<StoreItem>> GetPendingReviewAsync(StoreCategory? category, int page, int pageSize, CancellationToken cancellationToken = default);
+
+    // ── Admin transaction and pricing pool ───────────────────────────────────────
+    Task<int> CountPendingTransactionsAsync(StoreCategory? category, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetPendingTransactionsAsync(StoreCategory? category, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<int> CountPurchasedPendingPricingAsync(StoreCategory? category, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StoreItem>> GetPurchasedPendingPricingAsync(StoreCategory? category, int page, int pageSize, CancellationToken cancellationToken = default);
 }

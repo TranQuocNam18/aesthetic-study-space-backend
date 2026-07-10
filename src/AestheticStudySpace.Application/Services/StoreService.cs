@@ -160,25 +160,6 @@ public class StoreService : IStoreService
             RelatedPurchase = purchase
         }, cancellationToken);
 
-        if (item.CreatorId.HasValue && item.CreatorId.Value != userId)
-        {
-            var creator = await _userRepository.GetByIdAsync(item.CreatorId.Value, cancellationToken);
-            if (creator != null)
-            {
-                creator.CoinsBalance += item.CoinPrice.Value;
-                await _userRepository.UpdateAsync(creator, cancellationToken);
-
-                await _coinTransactionRepository.AddAsync(new CoinTransaction
-                {
-                    UserId = creator.Id,
-                    Type = CoinTransactionType.Earned,
-                    Amount = item.CoinPrice.Value,
-                    Reason = $"Sold:{item.Name}",
-                    RelatedPurchase = purchase
-                }, cancellationToken);
-            }
-        }
-
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new StorePurchaseResultDto(true, item.Id, user.CoinsBalance);
@@ -411,5 +392,8 @@ public class StoreService : IStoreService
             ownedIds is null ? null : ownedIds.Contains(x.Id),
             x.CoinPrice is > 0,
             x.RealMoneyPriceVnd is > 0,
-            inlineComponents?.Select(c => ToDto(c, ownedIds, null)).ToList());
+            inlineComponents?.Select(c => ToDto(c, ownedIds, null)).ToList(),
+            x.CreatorId,
+            x.Creator?.Username,
+            x.Creator?.AvatarUrl);
 }

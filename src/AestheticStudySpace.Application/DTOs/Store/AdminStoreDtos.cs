@@ -24,7 +24,13 @@ public record AdminStoreItemDto(
     string? RejectionNote,
     DateTime? ReviewedAt,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsBoughtByAdmin = false);
 
 public record CreateStoreItemRequestDto(
     StoreCategory Category,

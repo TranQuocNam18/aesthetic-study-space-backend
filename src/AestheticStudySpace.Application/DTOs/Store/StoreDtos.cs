@@ -21,7 +21,10 @@ public record StoreItemDto(
     bool? IsOwned = null,
     bool CanBuyWithCoins = false,
     bool CanBuyWithMoney = false,
-    IReadOnlyList<StoreItemDto>? Components = null);
+    IReadOnlyList<StoreItemDto>? Components = null,
+    Guid? CreatorId = null,
+    string? CreatorName = null,
+    string? CreatorAvatarUrl = null);
 
 public record UserInventoryItemDto(
     Guid InventoryId,

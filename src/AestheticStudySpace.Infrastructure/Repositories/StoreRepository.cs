@@ -30,6 +30,7 @@ public class StoreRepository : IStoreRepository
         pageSize = pageSize is < 1 or > 50 ? 20 : pageSize;
 
         return await ApplyCatalogFilter(_context.StoreItems.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted), category, themeSource, scope)
+            .Include(x => x.Creator)
             .OrderBy(x => x.Name)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -37,7 +38,9 @@ public class StoreRepository : IStoreRepository
     }
 
     public Task<StoreItem?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        _context.StoreItems.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.IsActive && !x.IsDeleted, cancellationToken);
+        _context.StoreItems.AsNoTracking()
+            .Include(x => x.Creator)
+            .FirstOrDefaultAsync(x => x.Id == id && x.IsActive && !x.IsDeleted, cancellationToken);
 
     public Task<StoreItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.StoreItems
@@ -374,6 +377,72 @@ public class StoreRepository : IStoreRepository
 
         return await query
             .OrderBy(x => x.CreatedAt) // oldest first — FIFO review queue
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    // ── Admin transaction and pricing pool ───────────────────────────────────────
+
+    public Task<int> CountPendingTransactionsAsync(StoreCategory? category, CancellationToken cancellationToken = default)
+    {
+        var query = _context.StoreItems.AsNoTracking()
+            .Where(x => x.Status == StoreItemStatus.PendingTransaction && !x.IsDeleted && x.ParentThemeId == null);
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+        return query.CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<StoreItem>> GetPendingTransactionsAsync(
+        StoreCategory? category,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
+        var query = _context.StoreItems.AsNoTracking()
+            .Include(x => x.Creator)
+            .Where(x => x.Status == StoreItemStatus.PendingTransaction && !x.IsDeleted && x.ParentThemeId == null);
+
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+
+        return await query
+            .OrderBy(x => x.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountPurchasedPendingPricingAsync(StoreCategory? category, CancellationToken cancellationToken = default)
+    {
+        var query = _context.StoreItems.AsNoTracking()
+            .Where(x => x.Status == StoreItemStatus.PurchasedPendingPricing && !x.IsDeleted && x.ParentThemeId == null);
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+        return query.CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<StoreItem>> GetPurchasedPendingPricingAsync(
+        StoreCategory? category,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
+        var query = _context.StoreItems.AsNoTracking()
+            .Include(x => x.Creator)
+            .Where(x => x.Status == StoreItemStatus.PurchasedPendingPricing && !x.IsDeleted && x.ParentThemeId == null);
+
+        if (category is not null)
+            query = query.Where(x => x.Category == category);
+
+        return await query
+            .OrderBy(x => x.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);

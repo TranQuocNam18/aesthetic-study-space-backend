@@ -13,6 +13,7 @@ public class UserComponentService : IUserComponentService
 {
     private readonly IStoreRepository _storeRepository;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationService _notificationService;
     private readonly IUnitOfWork _unitOfWork;
 
     private static readonly IReadOnlySet<StoreCategory> AllowedCategories = new HashSet<StoreCategory>
@@ -26,10 +27,12 @@ public class UserComponentService : IUserComponentService
     public UserComponentService(
         IStoreRepository storeRepository,
         IUserRepository userRepository,
+        INotificationService notificationService,
         IUnitOfWork unitOfWork)
     {
         _storeRepository = storeRepository;
         _userRepository = userRepository;
+        _notificationService = notificationService;
         _unitOfWork = unitOfWork;
     }
 
@@ -38,6 +41,9 @@ public class UserComponentService : IUserComponentService
         SubmitComponentRequestDto request,
         CancellationToken cancellationToken = default)
     {
+        if (!request.IsAgreedToTerms)
+            throw new ValidationException("You must agree to the transaction terms of service before submitting components.");
+
         ValidateRequest(request.Category, request.Name, request.AssetUrl, request.CoinPrice, request.RealMoneyPriceVnd);
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
@@ -59,12 +65,25 @@ public class UserComponentService : IUserComponentService
             RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null,
             IsActive = false,       // hidden until approved
             CreatorId = userId,
-            Status = StoreItemStatus.PendingReview,
-            ParentThemeId = null    // standalone submission
+            Status = StoreItemStatus.PendingTransaction,
+            ParentThemeId = null,    // standalone submission
+            BankAccountNumber = request.BankAccountNumber?.Trim(),
+            BankName = request.BankName?.Trim(),
+            BankAccountOwnerName = request.BankAccountOwnerName?.Trim(),
+            RequestedCoinPrice = request.RequestedCoinPrice,
+            RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd
         };
 
         await _storeRepository.AddStoreItemAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Create Web Notification for admin
+        await _notificationService.CreateNotificationAsync(
+            userId: null,
+            isForAdmin: true,
+            title: "New Component Transaction Request",
+            message: $"User {user.Username} submitted component '{item.Name}' ({item.Category}) for buyout transaction.",
+            cancellationToken);
 
         return ToDto(item);
     }
@@ -134,6 +153,9 @@ public class UserComponentService : IUserComponentService
         if (item.Status == StoreItemStatus.Approved)
             throw new ValidationException("Cannot update an approved component that is live in the store.");
 
+        if (item.Status == StoreItemStatus.PendingTransaction || item.Status == StoreItemStatus.PurchasedPendingPricing)
+            throw new ValidationException("Cannot update a component request that is currently pending transaction review or buyout processing.");
+
         item.Category = request.Category;
         item.Name = request.Name.Trim();
         item.Description = request.Description?.Trim();
@@ -141,9 +163,14 @@ public class UserComponentService : IUserComponentService
         item.PreviewUrl = request.PreviewUrl?.Trim();
         item.CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null;
         item.RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null;
+        item.BankAccountNumber = request.BankAccountNumber?.Trim();
+        item.BankName = request.BankName?.Trim();
+        item.BankAccountOwnerName = request.BankAccountOwnerName?.Trim();
+        item.RequestedCoinPrice = request.RequestedCoinPrice;
+        item.RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd;
 
-        // Reset to PendingReview on any update
-        item.Status = StoreItemStatus.PendingReview;
+        // Reset to PendingTransaction on any update
+        item.Status = StoreItemStatus.PendingTransaction;
         item.RejectionNote = null;
         item.UpdatedAt = DateTime.UtcNow;
 
@@ -164,6 +191,9 @@ public class UserComponentService : IUserComponentService
 
         if (item.Status == StoreItemStatus.Approved)
             throw new ValidationException("Cannot update an approved component that is live in the store.");
+
+        if (item.Status == StoreItemStatus.PendingTransaction || item.Status == StoreItemStatus.PurchasedPendingPricing)
+            throw new ValidationException("Cannot update a component request that is currently pending transaction review or buyout processing.");
 
         if (request.Name is not null)
         {
@@ -191,8 +221,23 @@ public class UserComponentService : IUserComponentService
         if (request.RealMoneyPriceVnd is not null)
             item.RealMoneyPriceVnd = request.RealMoneyPriceVnd > 0 ? request.RealMoneyPriceVnd : null;
 
-        // Reset to PendingReview on any update
-        item.Status = StoreItemStatus.PendingReview;
+        if (request.BankAccountNumber is not null)
+            item.BankAccountNumber = string.IsNullOrWhiteSpace(request.BankAccountNumber) ? null : request.BankAccountNumber.Trim();
+
+        if (request.BankName is not null)
+            item.BankName = string.IsNullOrWhiteSpace(request.BankName) ? null : request.BankName.Trim();
+
+        if (request.BankAccountOwnerName is not null)
+            item.BankAccountOwnerName = string.IsNullOrWhiteSpace(request.BankAccountOwnerName) ? null : request.BankAccountOwnerName.Trim();
+
+        if (request.RequestedCoinPrice is not null)
+            item.RequestedCoinPrice = request.RequestedCoinPrice > 0 ? request.RequestedCoinPrice : null;
+
+        if (request.RequestedRealMoneyPriceVnd is not null)
+            item.RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd > 0 ? request.RequestedRealMoneyPriceVnd : null;
+
+        // Reset to PendingTransaction on any update
+        item.Status = StoreItemStatus.PendingTransaction;
         item.RejectionNote = null;
         item.UpdatedAt = DateTime.UtcNow;
 
@@ -228,5 +273,8 @@ public class UserComponentService : IUserComponentService
         new(x.Id, x.Category, x.Name, x.Description, x.AssetUrl, x.PreviewUrl,
             x.CoinPrice, x.RealMoneyPriceVnd,
             x.Status, x.RejectionNote,
-            x.CreatedAt, x.ReviewedAt);
+            x.CreatedAt, x.ReviewedAt,
+            x.BankAccountNumber, x.BankName, x.BankAccountOwnerName,
+            x.RequestedCoinPrice, x.RequestedRealMoneyPriceVnd,
+            x.IsBoughtByAdmin);
 }
