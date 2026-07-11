@@ -40,8 +40,6 @@ public record SubmitThemeRequestDto(
     InlineComponentDto? InlineEffect,
     InlineComponentDto? InlineAmbientSound,
     // ── Pricing ──────────────────────────────────────────────────────────────
-    int? CoinPrice,
-    long? RealMoneyPriceVnd,
     List<Guid>? ThemeStickerItemIds = null,
     List<Guid>? ThemeBackgroundItemIds = null,
     List<Guid>? ThemeEffectItemIds = null,
@@ -109,8 +107,6 @@ public record PatchThemeRequestDto(
     List<InlineComponentDto>? InlineEffects = null,
     List<InlineComponentDto>? InlineAmbientSounds = null,
     // ── Pricing ───────────────────────────────────────────────────────────────
-    int? CoinPrice = null,
-    long? RealMoneyPriceVnd = null,
     string? BankAccountNumber = null,
     string? BankName = null,
     string? BankAccountOwnerName = null,

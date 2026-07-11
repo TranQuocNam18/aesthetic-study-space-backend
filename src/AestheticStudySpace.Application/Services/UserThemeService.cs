@@ -113,8 +113,8 @@ public class UserThemeService : IUserThemeService
             ThemeEffectItemId = effectId,
             ThemeAmbientSoundItemId = soundId,
             IsPremium = false,
-            CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null,
-            RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null,
+            CoinPrice = null,
+            RealMoneyPriceVnd = null,
             IsActive = false,
             CreatorId = userId,
             Status = StoreItemStatus.PendingTransaction,
@@ -305,8 +305,8 @@ public class UserThemeService : IUserThemeService
         item.ThemeBackgroundItemId = backgroundId;
         item.ThemeEffectItemId = effectId;
         item.ThemeAmbientSoundItemId = soundId;
-        item.CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null;
-        item.RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null;
+        item.CoinPrice = null;
+        item.RealMoneyPriceVnd = null;
         item.Status = StoreItemStatus.PendingTransaction;
         item.BankAccountNumber = request.BankAccountNumber?.Trim();
         item.BankName = request.BankName?.Trim();
@@ -381,12 +381,6 @@ public class UserThemeService : IUserThemeService
 
         if (request.PreviewUrl is not null)
             item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
-
-        if (request.CoinPrice is not null)
-            item.CoinPrice = request.CoinPrice > 0 ? request.CoinPrice : null;
-
-        if (request.RealMoneyPriceVnd is not null)
-            item.RealMoneyPriceVnd = request.RealMoneyPriceVnd > 0 ? request.RealMoneyPriceVnd : null;
 
         if (request.BankAccountNumber is not null)
             item.BankAccountNumber = string.IsNullOrWhiteSpace(request.BankAccountNumber) ? null : request.BankAccountNumber.Trim();
@@ -483,10 +477,6 @@ public class UserThemeService : IUserThemeService
             throw new ValidationException("Name is required.");
         if (string.IsNullOrWhiteSpace(request.AssetUrl))
             throw new ValidationException("AssetUrl is required.");
-        if (request.CoinPrice is < 0)
-            throw new ValidationException("CoinPrice cannot be negative.");
-        if (request.RealMoneyPriceVnd is < 0)
-            throw new ValidationException("RealMoneyPriceVnd cannot be negative.");
 
         // Validate inline component fields
         if (request.InlineSticker is not null)      ValidateInlineComponent(request.InlineSticker,      StoreCategory.Sticker);
@@ -552,9 +542,30 @@ public class UserThemeService : IUserThemeService
 
         if (ids.Count > 0)
         {
+            // Validate that the first (primary) existing item actually exists and is the correct category
+            var firstItem = await _storeRepository.GetByIdAsync(ids[0], cancellationToken)
+                ?? throw new ValidationException($"Store item '{ids[0]}' not found. Please provide a valid {category} item ID.");
+
+            if (firstItem.Category != category)
+                throw new ValidationException($"Store item '{ids[0]}' is category '{firstItem.Category}', but expected '{category}' for this slot.");
+
+            if (!firstItem.IsActive)
+                throw new ValidationException($"Store item '{ids[0]}' ({firstItem.Name}) is not active and cannot be used in a theme.");
+
             firstId = ids[0];
+
             for (int i = 1; i < ids.Count; i++)
             {
+                // Validate each additional existing item as well
+                var extraItem = await _storeRepository.GetByIdAsync(ids[i], cancellationToken)
+                    ?? throw new ValidationException($"Store item '{ids[i]}' not found.");
+
+                if (extraItem.Category != category)
+                    throw new ValidationException($"Store item '{ids[i]}' is category '{extraItem.Category}', but expected '{category}' for this slot.");
+
+                if (!extraItem.IsActive)
+                    throw new ValidationException($"Store item '{ids[i]}' ({extraItem.Name}) is not active and cannot be used in a theme.");
+
                 var cloned = await CloneAsInlineComponentAsync(ids[i], userId, cancellationToken);
                 itemsToCreate.Add(cloned);
             }
@@ -577,6 +588,7 @@ public class UserThemeService : IUserThemeService
 
         return (firstId, itemsToCreate);
     }
+
 
     private async Task<StoreItem> CloneAsInlineComponentAsync(Guid originalId, Guid? creatorId, CancellationToken cancellationToken)
     {

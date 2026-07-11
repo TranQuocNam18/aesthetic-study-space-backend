@@ -44,7 +44,7 @@ public class UserComponentService : IUserComponentService
         if (!request.IsAgreedToTerms)
             throw new ValidationException("You must agree to the transaction terms of service before submitting components.");
 
-        ValidateRequest(request.Category, request.Name, request.AssetUrl, request.CoinPrice, request.RealMoneyPriceVnd);
+        ValidateRequest(request.Category, request.Name, request.AssetUrl);
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
             ?? throw new NotFoundException("User not found.");
@@ -84,8 +84,8 @@ public class UserComponentService : IUserComponentService
             AssetUrl = request.AssetUrl.Trim(),
             PreviewUrl = request.PreviewUrl?.Trim(),
             IsPremium = false,
-            CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null,
-            RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null,
+            CoinPrice = null,
+            RealMoneyPriceVnd = null,
             IsActive = false,       // hidden until approved
             CreatorId = userId,
             Status = StoreItemStatus.PendingTransaction,
@@ -171,7 +171,7 @@ public class UserComponentService : IUserComponentService
         SubmitComponentRequestDto request,
         CancellationToken cancellationToken = default)
     {
-        ValidateRequest(request.Category, request.Name, request.AssetUrl, request.CoinPrice, request.RealMoneyPriceVnd);
+        ValidateRequest(request.Category, request.Name, request.AssetUrl);
 
         var item = await _storeRepository.GetUserComponentSubmissionByIdAsync(userId, id, cancellationToken)
             ?? throw new NotFoundException("Component submission not found.");
@@ -187,8 +187,8 @@ public class UserComponentService : IUserComponentService
         item.Description = request.Description?.Trim();
         item.AssetUrl = request.AssetUrl.Trim();
         item.PreviewUrl = request.PreviewUrl?.Trim();
-        item.CoinPrice = request.CoinPrice is > 0 ? request.CoinPrice : null;
-        item.RealMoneyPriceVnd = request.RealMoneyPriceVnd is > 0 ? request.RealMoneyPriceVnd : null;
+        item.CoinPrice = null;
+        item.RealMoneyPriceVnd = null;
         item.BankAccountNumber = request.BankAccountNumber?.Trim();
         item.BankName = request.BankName?.Trim();
         item.BankAccountOwnerName = request.BankAccountOwnerName?.Trim();
@@ -241,12 +241,6 @@ public class UserComponentService : IUserComponentService
         if (request.PreviewUrl is not null)
             item.PreviewUrl = string.IsNullOrWhiteSpace(request.PreviewUrl) ? null : request.PreviewUrl.Trim();
 
-        if (request.CoinPrice is not null)
-            item.CoinPrice = request.CoinPrice > 0 ? request.CoinPrice : null;
-
-        if (request.RealMoneyPriceVnd is not null)
-            item.RealMoneyPriceVnd = request.RealMoneyPriceVnd > 0 ? request.RealMoneyPriceVnd : null;
-
         if (request.BankAccountNumber is not null)
             item.BankAccountNumber = string.IsNullOrWhiteSpace(request.BankAccountNumber) ? null : request.BankAccountNumber.Trim();
 
@@ -275,7 +269,7 @@ public class UserComponentService : IUserComponentService
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
 
-    private static void ValidateRequest(StoreCategory category, string name, string assetUrl, int? coinPrice, long? realMoneyPriceVnd)
+    private static void ValidateRequest(StoreCategory category, string name, string assetUrl)
     {
         if (!AllowedCategories.Contains(category))
             throw new ValidationException(
@@ -287,12 +281,6 @@ public class UserComponentService : IUserComponentService
 
         if (string.IsNullOrWhiteSpace(assetUrl))
             throw new ValidationException("AssetUrl is required.");
-
-        if (coinPrice is < 0)
-            throw new ValidationException("CoinPrice cannot be negative.");
-
-        if (realMoneyPriceVnd is < 0)
-            throw new ValidationException("RealMoneyPriceVnd cannot be negative.");
     }
 
     internal static UserComponentSubmissionDto ToDto(StoreItem x) =>

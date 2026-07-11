@@ -14,8 +14,6 @@ public record SubmitComponentRequestDto(
     /// <summary>Cloudinary URL of the asset (already uploaded by client).</summary>
     string AssetUrl,
     string? PreviewUrl,
-    int? CoinPrice,
-    long? RealMoneyPriceVnd,
     string? BankAccountNumber = null,
     string? BankName = null,
     string? BankAccountOwnerName = null,
@@ -50,8 +48,6 @@ public record PatchComponentRequestDto(
     string? Description = null,
     string? AssetUrl = null,
     string? PreviewUrl = null,
-    int? CoinPrice = null,
-    long? RealMoneyPriceVnd = null,
     string? BankAccountNumber = null,
     string? BankName = null,
     string? BankAccountOwnerName = null,
