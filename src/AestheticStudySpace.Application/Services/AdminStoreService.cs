@@ -559,7 +559,7 @@ public class AdminStoreService : IAdminStoreService
         item.IsPremium = request.IsPremium;
         item.Status = StoreItemStatus.Approved;
         item.IsActive = true;
-        item.ThemeSource = StoreThemeSource.Community;
+        item.ThemeSource = StoreThemeSource.Creator;
         item.ReviewedAt = now;
         item.UpdatedAt = now;
 

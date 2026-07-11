@@ -103,7 +103,7 @@ public class UserThemeService : IUserThemeService
         var theme = new StoreItem
         {
             Category = StoreCategory.Theme,
-            ThemeSource = StoreThemeSource.Community,
+            ThemeSource = StoreThemeSource.Creator,
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             AssetUrl = request.AssetUrl.Trim(),
@@ -629,7 +629,7 @@ public class UserThemeService : IUserThemeService
         new(x.Id, x.Name, x.Description, x.AssetUrl, x.PreviewUrl,
             x.ThemeStickerItemId, x.ThemeBackgroundItemId, x.ThemeEffectItemId, x.ThemeAmbientSoundItemId,
             x.CoinPrice, x.RealMoneyPriceVnd,
-            x.ThemeSource ?? StoreThemeSource.Community,
+            x.ThemeSource ?? StoreThemeSource.Creator,
             x.Status, x.RejectionNote,
             x.CreatedAt, x.ReviewedAt,
             inlineComponents.Select(UserComponentService.ToDto).ToList(),

@@ -239,7 +239,18 @@ public class StoreRepository : IStoreRepository
 
     public Task UpdateStoreItemAsync(StoreItem item, CancellationToken cancellationToken = default)
     {
-        _context.StoreItems.Update(item);
+        var entry = _context.Entry(item);
+        if (entry.State == EntityState.Detached)
+        {
+            // Loaded via AsNoTracking — attach and mark as modified
+            _context.StoreItems.Update(item);
+        }
+        else if (entry.State == EntityState.Unchanged)
+        {
+            // Already tracked but no changes registered yet — mark all scalar properties as modified
+            entry.State = EntityState.Modified;
+        }
+        // If Added or Modified: EF Core already tracks the changes, nothing extra needed.
         return Task.CompletedTask;
     }
 
@@ -247,7 +258,7 @@ public class StoreRepository : IStoreRepository
 
     public Task<int> CountUserSubmissionsAsync(Guid userId, CancellationToken cancellationToken = default) =>
         _context.StoreItems.AsNoTracking()
-            .CountAsync(x => x.CreatorId == userId && !x.IsDeleted, cancellationToken);
+            .CountAsync(x => x.CreatorId == userId && x.Category == StoreCategory.Theme && !x.IsDeleted, cancellationToken);
 
     public async Task<IReadOnlyList<StoreItem>> GetUserSubmissionsAsync(
         Guid userId,
@@ -260,7 +271,7 @@ public class StoreRepository : IStoreRepository
 
         return await _context.StoreItems
             .AsNoTracking()
-            .Where(x => x.CreatorId == userId && !x.IsDeleted)
+            .Where(x => x.CreatorId == userId && x.Category == StoreCategory.Theme && !x.IsDeleted)
             .OrderByDescending(x => x.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -270,7 +281,7 @@ public class StoreRepository : IStoreRepository
     public Task<StoreItem?> GetUserSubmissionByIdAsync(Guid userId, Guid itemId, CancellationToken cancellationToken = default) =>
         _context.StoreItems
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == itemId && x.CreatorId == userId && !x.IsDeleted, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == itemId && x.CreatorId == userId && x.Category == StoreCategory.Theme && !x.IsDeleted, cancellationToken);
 
     // ── User component submission (standalone, non-Theme) ──────────────────────
 
