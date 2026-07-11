@@ -6,7 +6,7 @@ namespace AestheticStudySpace.Infrastructure.Persistence.Helpers;
 public static class EncryptionHelper
 {
     // Fixed keys for simple symmetric encryption. Must be 32 bytes (256-bit key) and 16 bytes (128-bit IV) respectively.
-    private static readonly byte[] Key = Encoding.UTF8.GetBytes("aEth3ticSpac3Pr0j3ctExe201kEy32"); 
+    private static readonly byte[] Key = Encoding.UTF8.GetBytes("aEth3ticSpac3Pr0j3ctExe201kEy32_"); 
     private static readonly byte[] Iv = Encoding.UTF8.GetBytes("eXe201aEth3tIcIv"); 
 
     public static string? Encrypt(string? plainText)

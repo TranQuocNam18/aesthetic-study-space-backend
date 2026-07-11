@@ -125,19 +125,10 @@ public class UserThemeService : IUserThemeService
             RequestedRealMoneyPriceVnd = request.RequestedRealMoneyPriceVnd
         };
 
-        await _storeRepository.AddStoreItemAsync(theme, cancellationToken);
-
-        foreach (var comp in allItemsToCreate)
-            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
-
-        // SaveChanges once to generate IDs for all items
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Now update the inline components' ParentThemeId to point to the Theme we just created
+        // Link inline components to the theme's ID first (since C# objects already have Guid.NewGuid() initialized on creation)
         foreach (var comp in allItemsToCreate)
         {
             comp.ParentThemeId = theme.Id;
-            await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
         }
 
         // Also update Theme's ThemeXxxItemId slots that came from inline items
@@ -150,7 +141,11 @@ public class UserThemeService : IUserThemeService
         if (theme.ThemeAmbientSoundItemId == null && soundItems.Any())
             theme.ThemeAmbientSoundItemId = soundItems.First().Id;
 
-        await _storeRepository.UpdateStoreItemAsync(theme, cancellationToken);
+        // Save everything in one database roundtrip
+        await _storeRepository.AddStoreItemAsync(theme, cancellationToken);
+        foreach (var comp in allItemsToCreate)
+            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Trigger mission: Share layout
@@ -316,18 +311,10 @@ public class UserThemeService : IUserThemeService
         item.RejectionNote = null;
         item.UpdatedAt = now;
 
-        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
-
-        foreach (var comp in allItemsToCreate)
-            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Update ParentThemeId and resolve IDs
+        // Link inline components to the theme's ID
         foreach (var comp in allItemsToCreate)
         {
             comp.ParentThemeId = item.Id;
-            await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
         }
 
         if (item.ThemeStickerItemId == null && stickerItems.Any())
@@ -340,6 +327,10 @@ public class UserThemeService : IUserThemeService
             item.ThemeAmbientSoundItemId = soundItems.First().Id;
 
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+
+        foreach (var comp in allItemsToCreate)
+            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToDto(item, allItemsToCreate);
@@ -432,22 +423,10 @@ public class UserThemeService : IUserThemeService
         await HandleInlineSlot(request.InlineEffect, request.InlineEffects, request.ThemeEffectItemId, request.ThemeEffectItemIds, StoreCategory.Effect, () => item.ThemeEffectItemId, v => item.ThemeEffectItemId = v);
         await HandleInlineSlot(request.InlineAmbientSound, request.InlineAmbientSounds, request.ThemeAmbientSoundItemId, request.ThemeAmbientSoundItemIds, StoreCategory.AmbientSound, () => item.ThemeAmbientSoundItemId, v => item.ThemeAmbientSoundItemId = v);
 
-        item.Status = StoreItemStatus.PendingTransaction;
-        item.RejectionNote = null;
-        item.UpdatedAt = now;
-
-        await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
-        
-        foreach (var comp in patchedInlineItems)
-            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Resolve inline IDs post-save
+        // Link inline components to the theme's ID
         foreach (var comp in patchedInlineItems)
         {
             comp.ParentThemeId = item.Id;
-            await _storeRepository.UpdateStoreItemAsync(comp, cancellationToken);
         }
 
         if (item.ThemeStickerItemId == null && patchedInlineItems.Any(x => x.Category == StoreCategory.Sticker))
@@ -459,7 +438,15 @@ public class UserThemeService : IUserThemeService
         if (item.ThemeAmbientSoundItemId == null && patchedInlineItems.Any(x => x.Category == StoreCategory.AmbientSound))
             item.ThemeAmbientSoundItemId = patchedInlineItems.First(x => x.Category == StoreCategory.AmbientSound).Id;
 
+        item.Status = StoreItemStatus.PendingTransaction;
+        item.RejectionNote = null;
+        item.UpdatedAt = now;
+
         await _storeRepository.UpdateStoreItemAsync(item, cancellationToken);
+        
+        foreach (var comp in patchedInlineItems)
+            await _storeRepository.AddStoreItemAsync(comp, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var allInline = await _storeRepository.GetInlineComponentsByThemeIdAsync(item.Id, cancellationToken);
