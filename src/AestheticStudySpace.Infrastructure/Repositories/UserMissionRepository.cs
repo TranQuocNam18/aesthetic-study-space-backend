@@ -12,7 +12,9 @@ public class UserMissionRepository : IUserMissionRepository
     public UserMissionRepository(AppDbContext context) => _context = context;
 
     public Task<UserMission?> GetForPeriodAsync(Guid userId, Guid missionId, DateOnly periodDate, CancellationToken cancellationToken = default) =>
-        _context.UserMissions.FirstOrDefaultAsync(x => x.UserId == userId && x.MissionId == missionId && x.PeriodDate == periodDate, cancellationToken);
+        _context.UserMissions
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.MissionId == missionId && x.PeriodDate == periodDate, cancellationToken);
 
     public async Task AddAsync(UserMission userMission, CancellationToken cancellationToken = default) =>
         await _context.UserMissions.AddAsync(userMission, cancellationToken);

@@ -76,8 +76,23 @@ public class MissionService : IMissionService
             };
             await _userMissionRepository.AddAsync(userMission, cancellationToken);
         }
+        else if (userMission!.IsDeleted)
+        {
+            // Restore soft-deleted mission progress for the current period
+            userMission.IsDeleted = false;
+            userMission.DeletedAt = null;
+            userMission.DeletedBy = null;
+            userMission.ProgressValue = 0;
+            userMission.IsCompleted = false;
+            userMission.CompletedAt = null;
+            userMission.ClaimedAt = null;
+            userMission.UpdatedAt = DateTime.UtcNow;
+            
+            // Explicitly track the update since it was previously detached or soft-deleted
+            await _userMissionRepository.UpdateAsync(userMission, cancellationToken);
+        }
 
-        if (userMission!.IsCompleted)
+        if (userMission.IsCompleted)
             return ToDto(userMission);
 
         userMission.ProgressValue += delta;
@@ -89,7 +104,7 @@ public class MissionService : IMissionService
         }
 
         // Do not call Update on a newly Added entity — EF would switch to Modified and issue UPDATE instead of INSERT.
-        if (!isNew)
+        if (!isNew && !userMission.IsDeleted)
             await _userMissionRepository.UpdateAsync(userMission, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
