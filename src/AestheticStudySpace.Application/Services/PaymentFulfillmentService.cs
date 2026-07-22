@@ -145,8 +145,9 @@ public class PaymentFulfillmentService : IPaymentFulfillmentService
         if (await _storeRepository.HasInventoryAsync(user.Id, storeItemId, cancellationToken))
             return; // idempotent: already owned
 
-        if (item.IsPremium && user.AccountTier != AccountTier.Premium)
-            throw new ForbiddenException("Premium subscription required.");
+        // Allow any user (free and premium) to purchase items
+        // if (item.IsPremium && user.AccountTier != AccountTier.Premium)
+        //     throw new ForbiddenException("Premium subscription required.");
 
         var purchase = new Purchase
         {

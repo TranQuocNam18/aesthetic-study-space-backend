@@ -124,8 +124,9 @@ public class StoreService : IStoreService
         if (user.IsBanned)
             throw new UnauthorizedException("User is banned.");
 
-        if (item.IsPremium && user.AccountTier != AccountTier.Premium)
-            throw new ForbiddenException("Premium subscription required.");
+        // Allow any user (free and premium) to purchase items
+        // if (item.IsPremium && user.AccountTier != AccountTier.Premium)
+        //     throw new ForbiddenException("Premium subscription required.");
 
         if (user.CoinsBalance < item.CoinPrice.Value)
             throw new ValidationException("Not enough coins.");
