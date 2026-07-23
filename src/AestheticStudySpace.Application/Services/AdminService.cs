@@ -190,6 +190,36 @@ public class AdminService : IAdminService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task DeletePaymentByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var tx = await _adminRepository.GetPaymentByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Payment transaction not found.");
+
+        await _adminRepository.DeletePaymentTransactionsAsync(new List<Guid> { id }, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeletePaymentsByProviderAsync(PaymentProvider provider, CancellationToken cancellationToken = default)
+    {
+        var (payments, _) = await _adminRepository.GetPaymentsAsync(
+            search: null,
+            provider: provider,
+            status: null,
+            purpose: null,
+            fromDate: null,
+            toDate: null,
+            page: 1,
+            pageSize: 99999,
+            cancellationToken: cancellationToken);
+
+        if (payments.Any())
+        {
+            var ids = payments.Select(p => p.Id).ToList();
+            await _adminRepository.DeletePaymentTransactionsAsync(ids, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     private static AdminUserDto ToDto(Domain.Entities.User u) =>
         new(u.Id, u.Username, u.Email, u.Role.Name, u.AccountTier.ToString(), u.IsBanned, u.CoinsBalance, u.CreatedAt, u.LastLoginAt);
 

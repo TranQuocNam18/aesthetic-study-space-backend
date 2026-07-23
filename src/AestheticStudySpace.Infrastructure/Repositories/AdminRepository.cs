@@ -83,5 +83,44 @@ public class AdminRepository : IAdminRepository
         _context.PaymentTransactions
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted, cancellationToken);
+
+    public async Task DeletePaymentTransactionsAsync(List<Guid> transactionIds, CancellationToken cancellationToken = default)
+    {
+        if (transactionIds == null || !transactionIds.Any())
+            return;
+
+        // 1. Clear association in Subscriptions
+        var subscriptions = await _context.Subscriptions
+            .Where(s => s.PaymentTransactionId.HasValue && transactionIds.Contains(s.PaymentTransactionId.Value))
+            .ToListAsync(cancellationToken);
+        foreach (var sub in subscriptions)
+        {
+            sub.PaymentTransactionId = null;
+        }
+
+        // 2. Load Purchases
+        var purchases = await _context.Purchases
+            .Where(p => p.PaymentTransactionId.HasValue && transactionIds.Contains(p.PaymentTransactionId.Value))
+            .ToListAsync(cancellationToken);
+        var purchaseIds = purchases.Select(p => p.Id).ToList();
+
+        if (purchaseIds.Any())
+        {
+            // 3. Delete CoinTransactions related to those purchases
+            var coinTransactions = await _context.CoinTransactions
+                .Where(c => c.RelatedPurchaseId.HasValue && purchaseIds.Contains(c.RelatedPurchaseId.Value))
+                .ToListAsync(cancellationToken);
+            _context.CoinTransactions.RemoveRange(coinTransactions);
+
+            // 4. Delete Purchases
+            _context.Purchases.RemoveRange(purchases);
+        }
+
+        // 5. Delete PaymentTransactions
+        var payments = await _context.PaymentTransactions
+            .Where(t => transactionIds.Contains(t.Id))
+            .ToListAsync(cancellationToken);
+        _context.PaymentTransactions.RemoveRange(payments);
+    }
 }
 

@@ -20,5 +20,7 @@ public interface IAdminRepository
         CancellationToken cancellationToken = default);
 
     Task<PaymentTransaction?> GetPaymentByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task DeletePaymentTransactionsAsync(List<Guid> transactionIds, CancellationToken cancellationToken = default);
 }
 

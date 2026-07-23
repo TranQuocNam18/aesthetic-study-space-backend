@@ -52,4 +52,22 @@ public class AdminPaymentController : ControllerBase
         await _adminService.ManualFulfillPaymentAsync(id, cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { fulfilled = true }));
     }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<object>>> DeletePayment(
+        [FromRoute] Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        await _adminService.DeletePaymentByIdAsync(id, cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { deleted = true }, "Payment transaction deleted successfully."));
+    }
+
+    [HttpDelete("provider/{provider}")]
+    public async Task<ActionResult<ApiResponse<object>>> DeletePaymentsByProvider(
+        [FromRoute] PaymentProvider provider,
+        CancellationToken cancellationToken = default)
+    {
+        await _adminService.DeletePaymentsByProviderAsync(provider, cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { deleted = true }, $"Payment transactions for provider '{provider}' deleted successfully."));
+    }
 }

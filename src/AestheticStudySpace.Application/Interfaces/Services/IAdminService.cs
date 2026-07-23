@@ -34,5 +34,8 @@ public interface IAdminService
     Task<AdminPaymentTransactionDto> GetPaymentByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task ManualFulfillPaymentAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task DeletePaymentByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task DeletePaymentsByProviderAsync(PaymentProvider provider, CancellationToken cancellationToken = default);
 }
 
