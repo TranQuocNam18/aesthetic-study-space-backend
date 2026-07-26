@@ -122,5 +122,12 @@ public class AdminRepository : IAdminRepository
             .ToListAsync(cancellationToken);
         _context.PaymentTransactions.RemoveRange(payments);
     }
+
+    public Task<List<Guid>> GetPaymentIdsByProviderAsync(PaymentProvider provider, CancellationToken cancellationToken = default) =>
+        _context.PaymentTransactions
+            .AsNoTracking()
+            .Where(t => t.Provider == provider && !t.IsDeleted)
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
 }
 

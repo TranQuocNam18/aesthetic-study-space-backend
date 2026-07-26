@@ -33,6 +33,8 @@ public static class SeedData
     public static readonly Guid MissionStudyStreakId = Guid.Parse("55555555-5555-5555-5555-555555555505");
     public static readonly Guid MissionBuyStoreItemId = Guid.Parse("55555555-5555-5555-5555-555555555506");
     public static readonly Guid MissionShareLayoutId = Guid.Parse("55555555-5555-5555-5555-555555555507");
+    public static readonly Guid MissionRollingWeeklyStudyId = Guid.Parse("55555555-5555-5555-5555-555555555508");
+    public static readonly Guid MissionDailyLoginStreakId = Guid.Parse("55555555-5555-5555-5555-555555555509");
 
     public static async Task InitializeAsync(IServiceProvider serviceProvider)
     {
@@ -348,6 +350,30 @@ public static class SeedData
                     TriggerKey = "share_layout",
                     TargetValue = 1,
                     Frequency = "weekly",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionRollingWeeklyStudyId,
+                    Code = "rolling_weekly_study",
+                    Name = "7-Day Rolling Focus Challenge",
+                    Description = "Accumulate 350 minutes of study in a 7-day period starting from your first session.",
+                    RewardCoins = 120,
+                    TriggerKey = "study_minutes",
+                    TargetValue = 350,
+                    Frequency = "rolling_weekly",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionDailyLoginStreakId,
+                    Code = "daily_login_streak",
+                    Name = "7-Day Login Streak Challenge",
+                    Description = "Log in for 7 consecutive days to earn increasing coin rewards up to 155 Coins.",
+                    RewardCoins = 155,
+                    TriggerKey = "daily_login_streak",
+                    TargetValue = 7,
+                    Frequency = "daily_login_streak",
                     IsActive = true
                 });
         }

@@ -12,12 +12,12 @@ public class AdminMissionService : IAdminMissionService
 {
     private static readonly HashSet<string> AllowedFrequencies = new(StringComparer.OrdinalIgnoreCase)
     {
-        "daily", "weekly", "once"
+        "daily", "weekly", "once", "rolling_weekly", "daily_login_streak"
     };
 
     private static readonly HashSet<string> AllowedTriggerKeys = new(StringComparer.OrdinalIgnoreCase)
     {
-        "daily_login", "pomodoro_complete", "study_minutes",
+        "daily_login", "daily_login_streak", "pomodoro_complete", "study_minutes",
         "long_focus_session", "study_streak_days", "buy_store_item", "share_layout"
     };
 
@@ -122,6 +122,27 @@ public class AdminMissionService : IAdminMissionService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RestoreAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var mission = await _missionRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException("Mission not found.");
+
+        mission.IsActive = true;
+        mission.IsDeleted = false;
+        mission.DeletedAt = null;
+        mission.UpdatedAt = DateTime.UtcNow;
+
+        await _missionRepository.UpdateAsync(mission, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public MissionMetadataOptionsDto GetMetadataOptions()
+    {
+        return new MissionMetadataOptionsDto(
+            AllowedTriggerKeys.ToList(),
+            AllowedFrequencies.ToList());
+    }
+
     private static void ValidateRequest(string code, string name, int rewardCoins, string triggerKey, string frequency, int? targetValue)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -134,13 +155,13 @@ public class AdminMissionService : IAdminMissionService
             throw new ValidationException("TriggerKey is required.");
 
         if (!AllowedTriggerKeys.Contains(triggerKey.Trim()))
-            throw new ValidationException("TriggerKey must be daily_login, pomodoro_complete, study_minutes, long_focus_session, study_streak_days, buy_store_item, or share_layout.");
+            throw new ValidationException($"TriggerKey must be one of: {string.Join(", ", AllowedTriggerKeys)}.");
 
         if (rewardCoins <= 0)
             throw new ValidationException("RewardCoins must be positive.");
 
         if (!AllowedFrequencies.Contains(frequency))
-            throw new ValidationException("Frequency must be daily, weekly, or once.");
+            throw new ValidationException($"Frequency must be one of: {string.Join(", ", AllowedFrequencies)}.");
 
         if (targetValue is <= 0)
             throw new ValidationException("TargetValue must be positive when set.");

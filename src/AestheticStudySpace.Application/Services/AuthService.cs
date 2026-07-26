@@ -85,6 +85,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login", 1, cancellationToken);
+        await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login_streak", 1, cancellationToken);
         return await IssueTokensAsync(user, cancellationToken);
     }
 
@@ -101,6 +102,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login", 1, cancellationToken);
+        await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login_streak", 1, cancellationToken);
         return await IssueTokensAsync(user, cancellationToken);
     }
 
@@ -180,6 +182,7 @@ public class AuthService : IAuthService
         }
 
         await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login", 1, cancellationToken);
+        await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login_streak", 1, cancellationToken);
         return await IssueTokensAsync(user, cancellationToken);
     }
 

@@ -26,6 +26,13 @@ public class AdminMissionsController : ControllerBase
         return Ok(ApiResponse<PagedResult<AdminMissionDto>>.Ok(result));
     }
 
+    [HttpGet("metadata")]
+    public ActionResult<ApiResponse<MissionMetadataOptionsDto>> GetMetadata()
+    {
+        var options = _adminMissionService.GetMetadataOptions();
+        return Ok(ApiResponse<MissionMetadataOptionsDto>.Ok(options));
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApiResponse<AdminMissionDto>>> GetById(Guid id, CancellationToken cancellationToken = default)
     {
@@ -57,5 +64,12 @@ public class AdminMissionsController : ControllerBase
     {
         await _adminMissionService.DeleteAsync(id, cancellationToken);
         return Ok(ApiResponse<object>.Ok(new { }, "Mission deactivated."));
+    }
+
+    [HttpPost("{id:guid}/restore")]
+    public async Task<ActionResult<ApiResponse<object>>> Restore(Guid id, CancellationToken cancellationToken = default)
+    {
+        await _adminMissionService.RestoreAsync(id, cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { }, "Mission restored."));
     }
 }

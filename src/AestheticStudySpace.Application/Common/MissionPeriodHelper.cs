@@ -9,7 +9,22 @@ public static class MissionPeriodHelper
         {
             "weekly" => GetWeekStart(DateOnly.FromDateTime(now)),
             "once" => DateOnly.FromDateTime(DateTime.UnixEpoch),
+            "rolling_weekly" => DateOnly.FromDateTime(now),
+            "daily_login_streak" => DateOnly.FromDateTime(now),
             _ => DateOnly.FromDateTime(now)
+        };
+    }
+
+    public static bool IsPeriodValid(string frequency, DateOnly periodDate, DateOnly currentDate)
+    {
+        return frequency.Trim().ToLowerInvariant() switch
+        {
+            "daily" => periodDate == currentDate,
+            "weekly" => periodDate == GetWeekStart(currentDate),
+            "rolling_weekly" => currentDate >= periodDate && currentDate < periodDate.AddDays(7),
+            "daily_login_streak" => currentDate >= periodDate && currentDate <= periodDate.AddDays(1),
+            "once" => true,
+            _ => periodDate == currentDate
         };
     }
 
@@ -21,3 +36,4 @@ public static class MissionPeriodHelper
         return date.AddDays(-diff);
     }
 }
+

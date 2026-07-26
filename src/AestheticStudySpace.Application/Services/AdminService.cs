@@ -201,20 +201,10 @@ public class AdminService : IAdminService
 
     public async Task DeletePaymentsByProviderAsync(PaymentProvider provider, CancellationToken cancellationToken = default)
     {
-        var (payments, _) = await _adminRepository.GetPaymentsAsync(
-            search: null,
-            provider: provider,
-            status: null,
-            purpose: null,
-            fromDate: null,
-            toDate: null,
-            page: 1,
-            pageSize: 99999,
-            cancellationToken: cancellationToken);
+        var ids = await _adminRepository.GetPaymentIdsByProviderAsync(provider, cancellationToken);
 
-        if (payments.Any())
+        if (ids.Any())
         {
-            var ids = payments.Select(p => p.Id).ToList();
             await _adminRepository.DeletePaymentTransactionsAsync(ids, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
