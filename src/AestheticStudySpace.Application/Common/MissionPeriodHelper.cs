@@ -2,10 +2,11 @@ namespace AestheticStudySpace.Application.Common;
 
 public static class MissionPeriodHelper
 {
-    public static DateOnly GetPeriodDate(string frequency, DateTime? utcNow = null)
+    public static DateOnly GetPeriodDate(string? frequency, DateTime? utcNow = null)
     {
+        var freq = string.IsNullOrWhiteSpace(frequency) ? "daily" : frequency.Trim().ToLowerInvariant();
         var now = utcNow ?? DateTime.UtcNow;
-        return frequency.Trim().ToLowerInvariant() switch
+        return freq switch
         {
             "weekly" => GetWeekStart(DateOnly.FromDateTime(now)),
             "once" => DateOnly.FromDateTime(DateTime.UnixEpoch),
@@ -15,9 +16,10 @@ public static class MissionPeriodHelper
         };
     }
 
-    public static bool IsPeriodValid(string frequency, DateOnly periodDate, DateOnly currentDate)
+    public static bool IsPeriodValid(string? frequency, DateOnly periodDate, DateOnly currentDate)
     {
-        return frequency.Trim().ToLowerInvariant() switch
+        var freq = string.IsNullOrWhiteSpace(frequency) ? "daily" : frequency.Trim().ToLowerInvariant();
+        return freq switch
         {
             "daily" => periodDate == currentDate,
             "weekly" => periodDate == GetWeekStart(currentDate),

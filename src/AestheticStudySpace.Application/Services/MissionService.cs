@@ -121,7 +121,7 @@ public class MissionService : IMissionService
         if (frequency == "daily_login_streak")
         {
             userMission = await _userMissionRepository.GetLatestForMissionAsync(userId, missionId, cancellationToken);
-            if (userMission is null)
+            if (userMission is null || (userMission.IsCompleted && userMission.PeriodDate < today))
             {
                 period = today;
                 userMission = new UserMission
@@ -133,6 +133,19 @@ public class MissionService : IMissionService
                 };
                 isNew = true;
                 await _userMissionRepository.AddAsync(userMission, cancellationToken);
+            }
+            else if (userMission.IsDeleted)
+            {
+                userMission.IsDeleted = false;
+                userMission.DeletedAt = null;
+                userMission.DeletedBy = null;
+                userMission.PeriodDate = today;
+                userMission.ProgressValue = 1;
+                userMission.IsCompleted = false;
+                userMission.CompletedAt = null;
+                userMission.ClaimedAt = null;
+                userMission.UpdatedAt = DateTime.UtcNow;
+                await _userMissionRepository.UpdateAsync(userMission, cancellationToken);
             }
             else if (userMission.PeriodDate == today)
             {
@@ -319,8 +332,9 @@ public class MissionService : IMissionService
         return ToDto(userMission);
     }
 
-    private static bool IsRollingOrStreak(string frequency)
+    private static bool IsRollingOrStreak(string? frequency)
     {
+        if (string.IsNullOrWhiteSpace(frequency)) return false;
         var f = frequency.Trim().ToLowerInvariant();
         return f is "rolling_weekly" or "daily_login_streak";
     }
