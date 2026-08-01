@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
     "MigrationId" character varying(150) NOT NULL,
     "ProductVersion" character varying(32) NOT NULL,
     CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
@@ -774,4 +774,31 @@ INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20260701074746_AddUserLastRetentionEmailSentAt', '8.0.22');
 
 COMMIT;
+
+START TRANSACTION;
+
+CREATE TABLE IF NOT EXISTS "UserLuckyDraws" (
+    "Id" uuid NOT NULL,
+    "UserId" uuid NOT NULL,
+    "DrawDate" date NOT NULL,
+    "RewardCoins" integer NOT NULL,
+    "RewardDescription" character varying(255) NOT NULL DEFAULT '',
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone,
+    "IsDeleted" boolean NOT NULL DEFAULT FALSE,
+    "DeletedAt" timestamp with time zone,
+    "CreatedBy" uuid,
+    "UpdatedBy" uuid,
+    "DeletedBy" uuid,
+    CONSTRAINT "PK_UserLuckyDraws" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_UserLuckyDraws_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "IX_UserLuckyDraws_UserId_DrawDate" ON "UserLuckyDraws" ("UserId", "DrawDate");
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20260801120000_AddUserLuckyDraws', '8.0.22');
+
+COMMIT;
+
 
