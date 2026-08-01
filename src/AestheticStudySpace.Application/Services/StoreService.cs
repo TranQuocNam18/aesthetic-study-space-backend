@@ -128,17 +128,21 @@ public class StoreService : IStoreService
         // if (item.IsPremium && user.AccountTier != AccountTier.Premium)
         //     throw new ForbiddenException("Premium subscription required.");
 
-        if (user.CoinsBalance < item.CoinPrice.Value)
+        var effectiveCoinPrice = user.AccountTier == AccountTier.Premium && item.CoinPrice.HasValue
+            ? (int)Math.Floor(item.CoinPrice.Value * 0.85)
+            : item.CoinPrice!.Value;
+
+        if (user.CoinsBalance < effectiveCoinPrice)
             throw new ValidationException("Not enough coins.");
 
-        user.CoinsBalance -= item.CoinPrice.Value;
+        user.CoinsBalance -= effectiveCoinPrice;
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         var purchase = new Purchase
         {
             UserId = userId,
             StoreItemId = item.Id,
-            CoinsSpent = item.CoinPrice.Value,
+            CoinsSpent = effectiveCoinPrice,
             AmountVnd = null
         };
         await _storeRepository.AddPurchaseAsync(purchase, cancellationToken);
@@ -152,12 +156,16 @@ public class StoreService : IStoreService
         // Trigger mission: Buy store item
         await _missionService.IncrementByTriggerKeyAsync(userId, "buy_store_item", 1, cancellationToken);
 
+        var reason = user.AccountTier == AccountTier.Premium
+            ? $"Purchase:{item.Name} (15% Premium Discount)"
+            : $"Purchase:{item.Name}";
+
         await _coinTransactionRepository.AddAsync(new CoinTransaction
         {
             UserId = userId,
             Type = CoinTransactionType.Spent,
-            Amount = item.CoinPrice.Value,
-            Reason = $"Purchase:{item.Name}",
+            Amount = effectiveCoinPrice,
+            Reason = reason,
             RelatedPurchase = purchase
         }, cancellationToken);
 
@@ -388,6 +396,7 @@ public class StoreService : IStoreService
             x.ThemeAmbientSoundItemId,
             x.IsPremium,
             x.CoinPrice,
+            x.CoinPrice.HasValue ? (int)Math.Floor(x.CoinPrice.Value * 0.85) : null,
             x.RealMoneyPriceVnd,
             x.IsActive,
             ownedIds is null ? null : ownedIds.Contains(x.Id),

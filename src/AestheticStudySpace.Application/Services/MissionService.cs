@@ -313,23 +313,30 @@ public class MissionService : IMissionService
         if (user.IsBanned)
             throw new UnauthorizedException("User is banned.");
 
-        user.CoinsBalance += mission.RewardCoins;
+        var multiplier = user.AccountTier == AccountTier.Premium ? 1.5 : 1.0;
+        var actualCoinsEarned = (int)Math.Round(mission.RewardCoins * multiplier);
+
+        user.CoinsBalance += actualCoinsEarned;
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         userMission.ClaimedAt = DateTime.UtcNow;
         await _userMissionRepository.UpdateAsync(userMission, cancellationToken);
 
+        var reason = user.AccountTier == AccountTier.Premium 
+            ? $"Mission:{mission.Code} (Premium 1.5x Multiplier)"
+            : $"Mission:{mission.Code}";
+
         await _coinTransactionRepository.AddAsync(new CoinTransaction
         {
             UserId = userId,
             Type = CoinTransactionType.Earned,
-            Amount = mission.RewardCoins,
-            Reason = $"Mission:{mission.Code}",
+            Amount = actualCoinsEarned,
+            Reason = reason,
             RelatedMissionId = mission.Id
         }, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return ToDto(userMission);
+        return ToDto(userMission, actualCoinsEarned, multiplier);
     }
 
     private static bool IsRollingOrStreak(string? frequency)
@@ -359,6 +366,6 @@ public class MissionService : IMissionService
             um?.CompletedAt,
             um?.ClaimedAt);
 
-    private static UserMissionDto ToDto(UserMission um) =>
-        new(um.MissionId, um.ProgressValue, um.IsCompleted, um.PeriodDate, um.CompletedAt, um.ClaimedAt);
+    private static UserMissionDto ToDto(UserMission um, int coinsEarned = 0, double multiplier = 1.0) =>
+        new(um.MissionId, um.ProgressValue, um.IsCompleted, um.PeriodDate, um.CompletedAt, um.ClaimedAt, coinsEarned, multiplier);
 }

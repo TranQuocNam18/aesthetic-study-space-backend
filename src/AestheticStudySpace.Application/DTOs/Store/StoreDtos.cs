@@ -16,6 +16,7 @@ public record StoreItemDto(
     Guid? ThemeAmbientSoundItemId,
     bool IsPremium,
     int? CoinPrice,
+    int? DiscountedCoinPrice,
     long? RealMoneyPriceVnd,
     bool IsActive,
     bool? IsOwned = null,

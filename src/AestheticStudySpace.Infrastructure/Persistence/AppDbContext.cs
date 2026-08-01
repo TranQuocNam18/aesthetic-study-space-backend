@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<Report> Reports => Set<Report>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<UserLuckyDraw> UserLuckyDraws => Set<UserLuckyDraw>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

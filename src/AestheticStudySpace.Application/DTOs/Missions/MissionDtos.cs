@@ -16,5 +16,7 @@ public record UserMissionDto(
     bool IsCompleted,
     DateOnly PeriodDate,
     DateTime? CompletedAt,
-    DateTime? ClaimedAt);
+    DateTime? ClaimedAt,
+    int CoinsEarned = 0,
+    double Multiplier = 1.0);
 
