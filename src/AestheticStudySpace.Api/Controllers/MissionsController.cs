@@ -24,6 +24,14 @@ public class MissionsController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<MissionWithProgressDto>>.Ok(missions));
     }
 
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<MissionWithProgressDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<MissionWithProgressDto>>> GetById([FromRoute] Guid id, CancellationToken cancellationToken = default)
+    {
+        var mission = await _missionService.GetByIdForUserAsync(User.GetUserId(), id, cancellationToken);
+        return Ok(ApiResponse<MissionWithProgressDto>.Ok(mission));
+    }
+
     [HttpPost("{id:guid}/claim")]
     public async Task<ActionResult<ApiResponse<UserMissionDto>>> Claim([FromRoute] Guid id, CancellationToken cancellationToken = default)
     {

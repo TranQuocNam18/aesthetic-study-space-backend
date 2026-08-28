@@ -14,7 +14,7 @@ public class AssetRepository : IAssetRepository
 
     public async Task<IReadOnlyList<Asset>> GetAllAsync(
         AssetType? type = null,
-        AssetCategory? category = null,
+        string? category = null,
         CancellationToken cancellationToken = default)
     {
         var query = _context.Assets.AsNoTracking().AsQueryable();
@@ -22,8 +22,8 @@ public class AssetRepository : IAssetRepository
         if (type.HasValue)
             query = query.Where(a => a.AssetType == type.Value);
 
-        if (category.HasValue)
-            query = query.Where(a => a.Category == category.Value);
+        if (!string.IsNullOrWhiteSpace(category))
+            query = query.Where(a => a.Category.ToLower() == category.ToLower());
 
         return await query.OrderBy(a => a.Name).ToListAsync(cancellationToken);
     }

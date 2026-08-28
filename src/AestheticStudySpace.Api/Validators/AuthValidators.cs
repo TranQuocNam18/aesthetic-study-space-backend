@@ -7,9 +7,20 @@ public class RegisterRequestDtoValidator : AbstractValidator<RegisterRequestDto>
 {
     public RegisterRequestDtoValidator()
     {
-        RuleFor(x => x.Username).NotEmpty().MinimumLength(3).MaximumLength(50);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(100);
+        RuleFor(x => x.Username)
+            .NotEmpty().WithMessage("Username is required.")
+            .MinimumLength(3).WithMessage("Username must be at least 3 characters.")
+            .MaximumLength(50).WithMessage("Username cannot exceed 50 characters.");
+
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email address format.")
+            .MaximumLength(256).WithMessage("Email cannot exceed 256 characters.");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password is required.")
+            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
+            .MaximumLength(100).WithMessage("Password cannot exceed 100 characters.");
     }
 }
 
@@ -17,8 +28,15 @@ public class LoginRequestDtoValidator : AbstractValidator<LoginRequestDto>
 {
     public LoginRequestDtoValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(1).MaximumLength(100);
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email address format.")
+            .MaximumLength(256).WithMessage("Email cannot exceed 256 characters.");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password is required.")
+            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
+            .MaximumLength(100).WithMessage("Password cannot exceed 100 characters.");
     }
 }
 
@@ -26,7 +44,9 @@ public class RefreshTokenRequestDtoValidator : AbstractValidator<RefreshTokenReq
 {
     public RefreshTokenRequestDtoValidator()
     {
-        RuleFor(x => x.RefreshToken).NotEmpty().MinimumLength(10);
+        RuleFor(x => x.RefreshToken)
+            .NotEmpty().WithMessage("Refresh token is required.")
+            .MinimumLength(10).WithMessage("Refresh token is too short.");
     }
 }
 
@@ -34,7 +54,8 @@ public class GoogleLoginRequestDtoValidator : AbstractValidator<GoogleLoginReque
 {
     public GoogleLoginRequestDtoValidator()
     {
-        RuleFor(x => x.IdToken).NotEmpty();
+        RuleFor(x => x.IdToken)
+            .NotEmpty().WithMessage("Google ID Token is required.");
     }
 }
 
@@ -42,7 +63,10 @@ public class ForgotPasswordRequestDtoValidator : AbstractValidator<ForgotPasswor
 {
     public ForgotPasswordRequestDtoValidator()
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email address format.")
+            .MaximumLength(256).WithMessage("Email cannot exceed 256 characters.");
     }
 }
 
@@ -50,8 +74,14 @@ public class ResetPasswordRequestDtoValidator : AbstractValidator<ResetPasswordR
 {
     public ResetPasswordRequestDtoValidator()
     {
-        RuleFor(x => x.Token).NotEmpty().MinimumLength(10);
-        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8).MaximumLength(100);
+        RuleFor(x => x.Token)
+            .NotEmpty().WithMessage("Reset token is required.")
+            .MinimumLength(10).WithMessage("Reset token is too short.");
+
+        RuleFor(x => x.NewPassword)
+            .NotEmpty().WithMessage("New password is required.")
+            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
+            .MaximumLength(100).WithMessage("Password cannot exceed 100 characters.");
     }
 }
 
@@ -66,4 +96,3 @@ public class UpdateUsernameRequestDtoValidator : AbstractValidator<UpdateUsernam
             .Matches(@"^[a-zA-Z0-9_\.]+$").WithMessage("Username can only contain letters, numbers, underscores and dots.");
     }
 }
-

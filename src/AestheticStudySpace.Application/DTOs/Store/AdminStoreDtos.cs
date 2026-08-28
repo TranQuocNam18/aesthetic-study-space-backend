@@ -24,7 +24,13 @@ public record AdminStoreItemDto(
     string? RejectionNote,
     DateTime? ReviewedAt,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsBoughtByAdmin = false);
 
 public record CreateStoreItemRequestDto(
     StoreCategory Category,
@@ -37,6 +43,10 @@ public record CreateStoreItemRequestDto(
     Guid? ThemeBackgroundItemId,
     Guid? ThemeEffectItemId,
     Guid? ThemeAmbientSoundItemId,
+    List<Guid>? ThemeStickerItemIds = null,
+    List<Guid>? ThemeBackgroundItemIds = null,
+    List<Guid>? ThemeEffectItemIds = null,
+    List<Guid>? ThemeAmbientSoundItemIds = null,
     bool IsPremium = true,
     int? CoinPrice = null,
     long? RealMoneyPriceVnd = null,
@@ -56,7 +66,11 @@ public record UpdateStoreItemRequestDto(
     bool IsPremium,
     int? CoinPrice,
     long? RealMoneyPriceVnd,
-    bool IsActive);
+    bool IsActive,
+    List<Guid>? ThemeStickerItemIds = null,
+    List<Guid>? ThemeBackgroundItemIds = null,
+    List<Guid>? ThemeEffectItemIds = null,
+    List<Guid>? ThemeAmbientSoundItemIds = null);
 
 public record ApproveThemeRequestDto(
     int? CoinPrice,
@@ -82,6 +96,10 @@ public record PatchStoreItemRequestDto(
     Guid? ThemeBackgroundItemId = null,
     Guid? ThemeEffectItemId = null,
     Guid? ThemeAmbientSoundItemId = null,
+    List<Guid>? ThemeStickerItemIds = null,
+    List<Guid>? ThemeBackgroundItemIds = null,
+    List<Guid>? ThemeEffectItemIds = null,
+    List<Guid>? ThemeAmbientSoundItemIds = null,
     bool? IsPremium = null,
     int? CoinPrice = null,
     long? RealMoneyPriceVnd = null,

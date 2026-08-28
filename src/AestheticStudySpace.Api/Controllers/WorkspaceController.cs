@@ -13,8 +13,13 @@ namespace AestheticStudySpace.Api.Controllers;
 public class WorkspaceController : ControllerBase
 {
     private readonly IWorkspaceService _workspaceService;
+    private readonly IWelcomeBackService _welcomeBackService;
 
-    public WorkspaceController(IWorkspaceService workspaceService) => _workspaceService = workspaceService;
+    public WorkspaceController(IWorkspaceService workspaceService, IWelcomeBackService welcomeBackService)
+    {
+        _workspaceService = workspaceService;
+        _welcomeBackService = welcomeBackService;
+    }
 
     /// <summary>Get all saved workspace configurations for the current user.</summary>
     [HttpGet("me")]
@@ -34,5 +39,15 @@ public class WorkspaceController : ControllerBase
         var userId = User.GetUserId();
         var config = await _workspaceService.SaveAsync(userId, request, cancellationToken);
         return Ok(ApiResponse<WorkspaceConfigDto>.Ok(config, "Workspace saved."));
+    }
+
+    /// <summary>Get personalized AI welcome back message based on yesterday's performance.</summary>
+    [HttpGet("welcome-back")]
+    [ProducesResponseType(typeof(ApiResponse<WelcomeBackDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<WelcomeBackDto>>> GetWelcomeBackMessage(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var result = await _welcomeBackService.GetWelcomeBackMessageAsync(userId, cancellationToken);
+        return Ok(ApiResponse<WelcomeBackDto>.Ok(result));
     }
 }

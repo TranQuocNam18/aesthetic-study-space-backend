@@ -48,3 +48,8 @@ public record MissionWithProgressDto(
     DateOnly PeriodDate,
     DateTime? CompletedAt,
     DateTime? ClaimedAt);
+
+public record MissionMetadataOptionsDto(
+    IReadOnlyList<string> AllowedTriggerKeys,
+    IReadOnlyList<string> AllowedFrequencies);
+

@@ -3,12 +3,14 @@ using AestheticStudySpace.Application.DTOs.Assets;
 using AestheticStudySpace.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AestheticStudySpace.Api.Controllers;
 
 [ApiController]
 [Route("api/assets")]
 [AllowAnonymous]
+[DisableRateLimiting]
 public class AssetsController : ControllerBase
 {
     private readonly IAssetService _assetService;

@@ -29,6 +29,12 @@ public static class SeedData
     public static readonly Guid MissionDailyLoginId = Guid.Parse("55555555-5555-5555-5555-555555555501");
     public static readonly Guid MissionPomodoroId = Guid.Parse("55555555-5555-5555-5555-555555555502");
     public static readonly Guid MissionWeeklyStudyId = Guid.Parse("55555555-5555-5555-5555-555555555503");
+    public static readonly Guid MissionLongFocusId = Guid.Parse("55555555-5555-5555-5555-555555555504");
+    public static readonly Guid MissionStudyStreakId = Guid.Parse("55555555-5555-5555-5555-555555555505");
+    public static readonly Guid MissionBuyStoreItemId = Guid.Parse("55555555-5555-5555-5555-555555555506");
+    public static readonly Guid MissionShareLayoutId = Guid.Parse("55555555-5555-5555-5555-555555555507");
+    public static readonly Guid MissionRollingWeeklyStudyId = Guid.Parse("55555555-5555-5555-5555-555555555508");
+    public static readonly Guid MissionDailyLoginStreakId = Guid.Parse("55555555-5555-5555-5555-555555555509");
 
     public static async Task InitializeAsync(IServiceProvider serviceProvider)
     {
@@ -100,7 +106,7 @@ public static class SeedData
             Description = "Soft rainfall ambience",
             Url = "https://res.cloudinary.com/demo/video/upload/rain.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.Rain,
+            Category = AssetCategory.Rain.ToString(),
             DefaultVolume = 70,
             IsPremium = false
         };
@@ -112,7 +118,7 @@ public static class SeedData
             Description = "Low café background chatter",
             Url = "https://res.cloudinary.com/demo/video/upload/cafe.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.Cafe,
+            Category = AssetCategory.Cafe.ToString(),
             DefaultVolume = 55,
             IsPremium = false
         };
@@ -124,7 +130,7 @@ public static class SeedData
             Description = "Steady white noise for focus",
             Url = "https://res.cloudinary.com/demo/video/upload/whitenoise.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.WhiteNoise,
+            Category = AssetCategory.WhiteNoise.ToString(),
             DefaultVolume = 60,
             IsPremium = false
         };
@@ -136,7 +142,7 @@ public static class SeedData
             Description = "Animated cat visual layer",
             Url = "https://res.cloudinary.com/demo/image/upload/cat-sleeping.gif",
             AssetType = AssetType.Sticker,
-            Category = AssetCategory.Pet,
+            Category = AssetCategory.Pet.ToString(),
             DefaultVolume = 0,
             IsPremium = false
         };
@@ -148,7 +154,7 @@ public static class SeedData
             Description = "Premium lofi hip-hop stream",
             Url = "https://res.cloudinary.com/demo/video/upload/lofi-premium.mp3",
             AssetType = AssetType.Audio,
-            Category = AssetCategory.Lofi,
+            Category = AssetCategory.Lofi.ToString(),
             DefaultVolume = 65,
             IsPremium = true
         };
@@ -296,6 +302,78 @@ public static class SeedData
                     TriggerKey = "study_minutes",
                     TargetValue = 300,
                     Frequency = "weekly",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionLongFocusId,
+                    Code = "long_focus_session",
+                    Name = "Deep Work Session",
+                    Description = "Complete a continuous focus session of at least 45 minutes.",
+                    RewardCoins = 50,
+                    TriggerKey = "long_focus_session",
+                    TargetValue = 45,
+                    Frequency = "daily",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionStudyStreakId,
+                    Code = "study_streak_days",
+                    Name = "Weekly Focus Streak",
+                    Description = "Focus for at least 25 minutes daily for 5 days in a week.",
+                    RewardCoins = 150,
+                    TriggerKey = "study_streak_days",
+                    TargetValue = 5,
+                    Frequency = "weekly",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionBuyStoreItemId,
+                    Code = "buy_store_item",
+                    Name = "First Purchase",
+                    Description = "Purchase any decorative item from the Store for the first time using Coins.",
+                    RewardCoins = 50,
+                    TriggerKey = "buy_store_item",
+                    TargetValue = 1,
+                    Frequency = "once",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionShareLayoutId,
+                    Code = "share_layout",
+                    Name = "Community Contributor",
+                    Description = "Share or publish your custom room combo layout to the community.",
+                    RewardCoins = 50,
+                    TriggerKey = "share_layout",
+                    TargetValue = 1,
+                    Frequency = "weekly",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionRollingWeeklyStudyId,
+                    Code = "rolling_weekly_study",
+                    Name = "7-Day Rolling Focus Challenge",
+                    Description = "Accumulate 350 minutes of study in a 7-day period starting from your first session.",
+                    RewardCoins = 120,
+                    TriggerKey = "study_minutes",
+                    TargetValue = 350,
+                    Frequency = "rolling_weekly",
+                    IsActive = true
+                },
+                new Mission
+                {
+                    Id = MissionDailyLoginStreakId,
+                    Code = "daily_login_streak",
+                    Name = "7-Day Login Streak Challenge",
+                    Description = "Log in for 7 consecutive days to earn increasing coin rewards up to 155 Coins.",
+                    RewardCoins = 155,
+                    TriggerKey = "daily_login_streak",
+                    TargetValue = 7,
+                    Frequency = "daily_login_streak",
                     IsActive = true
                 });
         }

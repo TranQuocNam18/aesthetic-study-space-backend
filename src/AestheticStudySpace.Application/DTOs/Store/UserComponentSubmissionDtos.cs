@@ -14,8 +14,12 @@ public record SubmitComponentRequestDto(
     /// <summary>Cloudinary URL of the asset (already uploaded by client).</summary>
     string AssetUrl,
     string? PreviewUrl,
-    int? CoinPrice,
-    long? RealMoneyPriceVnd);
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsAgreedToTerms = false);
 
 /// <summary>Response DTO showing one of the user's submitted components.</summary>
 public record UserComponentSubmissionDto(
@@ -30,7 +34,13 @@ public record UserComponentSubmissionDto(
     StoreItemStatus Status,
     string? RejectionNote,
     DateTime SubmittedAt,
-    DateTime? ReviewedAt);
+    DateTime? ReviewedAt,
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null,
+    bool IsBoughtByAdmin = false);
 
 /// <summary>Request DTO for partially updating a user's component submission.</summary>
 public record PatchComponentRequestDto(
@@ -38,5 +48,8 @@ public record PatchComponentRequestDto(
     string? Description = null,
     string? AssetUrl = null,
     string? PreviewUrl = null,
-    int? CoinPrice = null,
-    long? RealMoneyPriceVnd = null);
+    string? BankAccountNumber = null,
+    string? BankName = null,
+    string? BankAccountOwnerName = null,
+    int? RequestedCoinPrice = null,
+    long? RequestedRealMoneyPriceVnd = null);

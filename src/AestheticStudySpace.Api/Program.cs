@@ -87,7 +87,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddFixedWindowLimiter("api", limiter =>
     {
-        limiter.PermitLimit = 100;
+        limiter.PermitLimit = 1000;
         limiter.Window = TimeSpan.FromMinutes(1);
         limiter.QueueLimit = 0;
     });
@@ -111,6 +111,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

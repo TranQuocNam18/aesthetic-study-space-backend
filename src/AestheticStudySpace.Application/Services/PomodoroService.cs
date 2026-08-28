@@ -78,6 +78,18 @@ public class PomodoroService : IPomodoroService
             await _missionService.IncrementByTriggerKeyAsync(userId, "pomodoro_complete", 1, cancellationToken);
             var studyMinutes = Math.Max(1, (int)Math.Round(actualMinutes));
             await _missionService.IncrementByTriggerKeyAsync(userId, "study_minutes", studyMinutes, cancellationToken);
+            
+            // Trigger long focus session check
+            await _missionService.IncrementByTriggerKeyAsync(userId, "long_focus_session", studyMinutes, cancellationToken);
+
+            // Trigger streak day check
+            var todayStats = await _pomodoroRepository.GetStatsAsync(userId, DateTime.UtcNow.Date, DateTime.UtcNow, cancellationToken);
+            var minutesToday = todayStats.totalMinutes;
+            var minutesBeforeThisSession = minutesToday - studyMinutes;
+            if (minutesToday >= 25 && minutesBeforeThisSession < 25)
+            {
+                await _missionService.IncrementByTriggerKeyAsync(userId, "study_streak_days", 1, cancellationToken);
+            }
         }
 
         return session.ToDto();

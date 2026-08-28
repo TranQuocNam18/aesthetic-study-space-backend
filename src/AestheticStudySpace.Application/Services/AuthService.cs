@@ -29,6 +29,7 @@ public class AuthService : IAuthService
     private readonly IUnitOfWork _unitOfWork;
     private readonly string? _frontendBaseUrl;
     private readonly string? _googleClientId;
+    private readonly string _backendBaseUrl;
 
     public AuthService(
         IRoleRepository roleRepository,
@@ -55,6 +56,7 @@ public class AuthService : IAuthService
 
         _frontendBaseUrl = configuration["App:FrontendBaseUrl"];
         _googleClientId = googleAuth.Value.ClientId;
+        _backendBaseUrl = configuration["App:BackendBaseUrl"] ?? "http://localhost:8080";
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request, CancellationToken cancellationToken = default)
@@ -83,6 +85,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login", 1, cancellationToken);
+        await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login_streak", 1, cancellationToken);
         return await IssueTokensAsync(user, cancellationToken);
     }
 
@@ -99,6 +102,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login", 1, cancellationToken);
+        await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login_streak", 1, cancellationToken);
         return await IssueTokensAsync(user, cancellationToken);
     }
 
@@ -178,6 +182,7 @@ public class AuthService : IAuthService
         }
 
         await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login", 1, cancellationToken);
+        await _missionService.IncrementByTriggerKeyAsync(user.Id, "daily_login_streak", 1, cancellationToken);
         return await IssueTokensAsync(user, cancellationToken);
     }
 
@@ -200,11 +205,63 @@ public class AuthService : IAuthService
             ? token
             : $"{_frontendBaseUrl.TrimEnd('/')}/reset-password?token={Uri.EscapeDataString(token)}";
 
-        var body = $"""
-<p>You requested a password reset for <strong>Aesthetic Study Space</strong>.</p>
-<p>Reset link (valid for 30 minutes):</p>
-<p><a href="{link}">{link}</a></p>
-<p>If you didn't request this, you can ignore this email.</p>
+        var fontBaseUrl = _backendBaseUrl.TrimEnd('/');
+        var body = $$"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @font-face {
+            font-family: 'HarmonyOS Sans';
+            src: url('{{fontBaseUrl}}/fonts/HarmonyOS_Sans_Regular.ttf') format('truetype');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'HarmonyOS Sans';
+            src: url('{{fontBaseUrl}}/fonts/HarmonyOS_Sans_Bold.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Manrope';
+            src: url('{{fontBaseUrl}}/fonts/Manrope-VariableFont_wght.ttf') format('truetype');
+            font-weight: 200 800;
+        }
+        body {
+            font-family: 'HarmonyOS Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0C0F0F;
+            color: #FFFFFF;
+            padding: 30px;
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .logo-text {
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 28px;
+            font-weight: 500;
+            color: #FFFFFF;
+            letter-spacing: -0.5px;
+            display: inline-block;
+        }
+        a {
+            color: #00F0C2;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <span class="logo-text">Aēsthetic Space</span>
+    </div>
+    <p>You requested a password reset for <strong>Aēsthetic Space</strong>.</p>
+    <p>Reset link (valid for 30 minutes):</p>
+    <p><a href="{{link}}">{{link}}</a></p>
+    <p>If you didn't request this, you can ignore this email.</p>
+</body>
+</html>
 """;
 
         // Send email BEFORE saving token to database

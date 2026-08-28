@@ -17,3 +17,5 @@ public record AdminUserDto(
 /// </summary>
 public record UpdateUserTierRequestDto(string Tier);
 
+public record AddCoinsRequestDto(int Amount);
+

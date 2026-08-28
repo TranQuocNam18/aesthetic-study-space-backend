@@ -4,6 +4,7 @@ using AestheticStudySpace.Application.Interfaces.Repositories;
 using AestheticStudySpace.Application.Interfaces.Services;
 using AestheticStudySpace.Domain.Entities;
 using AestheticStudySpace.Domain.Exceptions;
+using Microsoft.Extensions.Configuration;
 
 namespace AestheticStudySpace.Application.Services;
 
@@ -16,19 +17,22 @@ public class ReportService : IReportService
     private readonly IEmailSender _emailSender;
     private readonly IReportRepository _reportRepository;
     private readonly IMediaStorageService _mediaStorageService;
+    private readonly string _backendBaseUrl;
 
     public ReportService(
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IEmailSender emailSender,
         IReportRepository reportRepository,
-        IMediaStorageService mediaStorageService)
+        IMediaStorageService mediaStorageService,
+        IConfiguration configuration)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _emailSender = emailSender;
         _reportRepository = reportRepository;
         _mediaStorageService = mediaStorageService;
+        _backendBaseUrl = configuration["App:BackendBaseUrl"] ?? "http://localhost:8080";
     }
 
     public async Task<ReportResponseDto> CreateReportAsync(
@@ -107,7 +111,7 @@ public class ReportService : IReportService
         try
         {
             var subject = $"[{report.Type.ToUpper()} #{report.Id.ToString()[..8].ToUpper()}] {report.Title}";
-            var htmlBody = BuildEmailBody(user, report);
+            var htmlBody = BuildEmailBody(user, report, _backendBaseUrl);
             await _emailSender.SendAsync(SupportEmail, subject, htmlBody, cancellationToken);
         }
         catch (Exception ex)
@@ -116,7 +120,7 @@ public class ReportService : IReportService
         }
     }
 
-    private static string BuildEmailBody(Domain.Entities.User user, Report report)
+    private static string BuildEmailBody(Domain.Entities.User user, Report report, string backendBaseUrl)
     {
         var typeBadgeColor = report.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase) ? "#f8d7da" : "#d1ecf1";
         var typeTextColor = report.Type.Equals("Bug", StringComparison.OrdinalIgnoreCase) ? "#721c24" : "#0c5460";
@@ -135,20 +139,49 @@ public class ReportService : IReportService
             </div>";
         }
 
+        var fontBaseUrl = backendBaseUrl.TrimEnd('/');
         return $@"<!DOCTYPE html>
 <html lang=""en"">
 <head>
     <meta charset=""UTF-8""/>
     <style>
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }}
+        @font-face {{
+            font-family: 'HarmonyOS Sans';
+            src: url('{fontBaseUrl}/fonts/HarmonyOS_Sans_Regular.ttf') format('truetype');
+            font-weight: 400;
+            font-style: normal;
+        }}
+        @font-face {{
+            font-family: 'HarmonyOS Sans';
+            src: url('{fontBaseUrl}/fonts/HarmonyOS_Sans_Bold.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+        }}
+        @font-face {{
+            font-family: 'Manrope';
+            src: url('{fontBaseUrl}/fonts/Manrope-VariableFont_wght.ttf') format('truetype');
+            font-weight: 200 800;
+        }}
+        body {{ font-family: 'HarmonyOS Sans', 'Segoe UI', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }}
+        .logo-container {{
+            margin-bottom: 12px;
+        }}
+        .logo-text {{
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 24px;
+            font-weight: 500;
+            color: #FFFFFF;
+            letter-spacing: -0.5px;
+            display: inline-block;
+        }}
         .container {{ max-width: 600px; margin: 32px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
-        .header {{ background: linear-gradient(135deg, #6c63ff, #a78bfa); padding: 28px 32px; color: #fff; }}
+        .header {{ background: linear-gradient(135deg, #2c786c, #00f0c2); padding: 28px 32px; color: #fff; }}
         .header h1 {{ margin: 0; font-size: 20px; font-weight: 700; }}
         .header p {{ margin: 4px 0 0; opacity: 0.85; font-size: 13px; }}
         .body {{ padding: 28px 32px; }}
-        .label {{ font-size: 11px; font-weight: 600; color: #6c63ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }}
+        .label {{ font-size: 11px; font-weight: 600; color: #2c786c; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }}
         .value {{ font-size: 14px; color: #1a1a2e; margin-bottom: 20px; word-break: break-word; }}
-        .content-box {{ background: #f8f8ff; border-left: 4px solid #6c63ff; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #333; white-space: pre-wrap; word-break: break-word; }}
+        .content-box {{ background: #f8f8ff; border-left: 4px solid #2c786c; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #333; white-space: pre-wrap; word-break: break-word; }}
         .footer {{ background: #f5f5f5; padding: 16px 32px; font-size: 12px; color: #888; text-align: center; }}
         .badge {{ display: inline-block; border-radius: 4px; padding: 2px 10px; font-size: 12px; font-weight: 600; }}
     </style>
@@ -156,8 +189,11 @@ public class ReportService : IReportService
 <body>
     <div class=""container"">
         <div class=""header"">
+            <div class=""logo-container"">
+                <span class=""logo-text"">Aēsthetic Space</span>
+            </div>
             <h1>&#x1F6A8; New User {report.Type}</h1>
-            <p>Aesthetic Study Space — Support Inbox</p>
+            <p>Aēsthetic Space — Support Inbox</p>
         </div>
         <div class=""body"">
             <div class=""label"">Report ID</div>

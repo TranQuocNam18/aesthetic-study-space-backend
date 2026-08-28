@@ -14,13 +14,20 @@ public class StoreService : IStoreService
     private readonly IUserRepository _userRepository;
     private readonly IStoreRepository _storeRepository;
     private readonly ICoinTransactionRepository _coinTransactionRepository;
+    private readonly IMissionService _missionService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public StoreService(IUserRepository userRepository, IStoreRepository storeRepository, ICoinTransactionRepository coinTransactionRepository, IUnitOfWork unitOfWork)
+    public StoreService(
+        IUserRepository userRepository, 
+        IStoreRepository storeRepository, 
+        ICoinTransactionRepository coinTransactionRepository, 
+        IMissionService missionService,
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _storeRepository = storeRepository;
         _coinTransactionRepository = coinTransactionRepository;
+        _missionService = missionService;
         _unitOfWork = unitOfWork;
     }
 
@@ -43,9 +50,17 @@ public class StoreService : IStoreService
         var total = await _storeRepository.CountActiveItemsAsync(category, themeSource, scope, cancellationToken);
         var items = await _storeRepository.GetActiveItemsAsync(category, themeSource, scope, page, pageSize, cancellationToken);
 
+        var themeIds = items.Where(x => x.Category == StoreCategory.Theme).Select(x => x.Id).ToList();
+        var allInline = new Dictionary<Guid, IReadOnlyList<StoreItem>>();
+        foreach (var tid in themeIds)
+        {
+            var inline = await _storeRepository.GetInlineComponentsByThemeIdAsync(tid, cancellationToken);
+            allInline[tid] = inline;
+        }
+
         return new PagedResult<StoreItemDto>
         {
-            Items = items.Select(x => ToDto(x, ownedIds)).ToList(),
+            Items = items.Select(x => ToDto(x, ownedIds, allInline.GetValueOrDefault(x.Id))).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = total
@@ -61,7 +76,11 @@ public class StoreService : IStoreService
         if (viewerUserId is not null)
             ownedIds = await _storeRepository.GetOwnedStoreItemIdsAsync(viewerUserId.Value, cancellationToken);
 
-        return ToDto(item, ownedIds);
+        IReadOnlyList<StoreItem>? inline = null;
+        if (item.Category == StoreCategory.Theme)
+            inline = await _storeRepository.GetInlineComponentsByThemeIdAsync(item.Id, cancellationToken);
+
+        return ToDto(item, ownedIds, inline);
     }
 
     public async Task<PagedResult<UserInventoryItemDto>> GetInventoryAsync(
@@ -105,20 +124,25 @@ public class StoreService : IStoreService
         if (user.IsBanned)
             throw new UnauthorizedException("User is banned.");
 
-        if (item.IsPremium && user.AccountTier != AccountTier.Premium)
-            throw new ForbiddenException("Premium subscription required.");
+        // Allow any user (free and premium) to purchase items
+        // if (item.IsPremium && user.AccountTier != AccountTier.Premium)
+        //     throw new ForbiddenException("Premium subscription required.");
 
-        if (user.CoinsBalance < item.CoinPrice.Value)
+        var effectiveCoinPrice = user.AccountTier == AccountTier.Premium && item.CoinPrice.HasValue
+            ? (int)Math.Floor(item.CoinPrice.Value * 0.85)
+            : item.CoinPrice!.Value;
+
+        if (user.CoinsBalance < effectiveCoinPrice)
             throw new ValidationException("Not enough coins.");
 
-        user.CoinsBalance -= item.CoinPrice.Value;
+        user.CoinsBalance -= effectiveCoinPrice;
         await _userRepository.UpdateAsync(user, cancellationToken);
 
         var purchase = new Purchase
         {
             UserId = userId,
             StoreItemId = item.Id,
-            CoinsSpent = item.CoinPrice.Value,
+            CoinsSpent = effectiveCoinPrice,
             AmountVnd = null
         };
         await _storeRepository.AddPurchaseAsync(purchase, cancellationToken);
@@ -129,12 +153,19 @@ public class StoreService : IStoreService
             StoreItemId = item.Id
         }, cancellationToken);
 
+        // Trigger mission: Buy store item
+        await _missionService.IncrementByTriggerKeyAsync(userId, "buy_store_item", 1, cancellationToken);
+
+        var reason = user.AccountTier == AccountTier.Premium
+            ? $"Purchase:{item.Name} (15% Premium Discount)"
+            : $"Purchase:{item.Name}";
+
         await _coinTransactionRepository.AddAsync(new CoinTransaction
         {
             UserId = userId,
             Type = CoinTransactionType.Spent,
-            Amount = item.CoinPrice.Value,
-            Reason = $"Purchase:{item.Name}",
+            Amount = effectiveCoinPrice,
+            Reason = reason,
             RelatedPurchase = purchase
         }, cancellationToken);
 
@@ -146,6 +177,9 @@ public class StoreService : IStoreService
     public async Task<PagedResult<PurchaseHistoryItemDto>> GetPurchaseHistoryAsync(
         Guid userId,
         PurchaseHistoryKind? kind,
+        PaymentStatus? status,
+        DateTime? fromDate,
+        DateTime? toDate,
         int page,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -178,9 +212,18 @@ public class StoreService : IStoreService
             .Cast<PurchaseHistoryItemDto>()
             .ToList();
 
-        // Apply kind filter (in-memory, after projection so Kind is resolved)
+        // Apply filters in-memory
         if (kind is not null)
             allItems = allItems.Where(x => x.Kind == kind.Value).ToList();
+
+        if (status is not null)
+            allItems = allItems.Where(x => x.Status == status.Value).ToList();
+
+        if (fromDate is not null)
+            allItems = allItems.Where(x => x.PurchasedAt >= fromDate.Value).ToList();
+
+        if (toDate is not null)
+            allItems = allItems.Where(x => x.PurchasedAt <= toDate.Value).ToList();
 
         var total = allItems.Count;
         var items = allItems.Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -232,6 +275,7 @@ public class StoreService : IStoreService
                 purchase.Currency,
                 payment?.Provider,
                 payment?.TransactionCode,
+                payment?.Status ?? PaymentStatus.Succeeded,
                 item.Id,
                 item.Category,
                 item.ThemeSource,
@@ -255,6 +299,7 @@ public class StoreService : IStoreService
                 purchase.Currency,
                 payment.Provider,
                 payment.TransactionCode,
+                payment.Status,
                 null,
                 null,
                 null,
@@ -276,6 +321,7 @@ public class StoreService : IStoreService
             purchase.Currency,
             payment?.Provider,
             payment?.TransactionCode,
+            payment?.Status ?? PaymentStatus.Succeeded,
             null,
             null,
             null,
@@ -287,17 +333,43 @@ public class StoreService : IStoreService
             purchase.CreatedAt);
     }
 
-    private static PurchaseHistoryItemDto ToHistoryDto(PaymentTransaction payment) =>
-        new(
+    private static PurchaseHistoryItemDto ToHistoryDto(PaymentTransaction payment)
+    {
+        var kind = payment.Purpose switch
+        {
+            PaymentPurpose.Subscription => PurchaseHistoryKind.Subscription,
+            PaymentPurpose.BuyCoins => PurchaseHistoryKind.CoinPack,
+            PaymentPurpose.BuyAsset => PurchaseHistoryKind.StoreItem,
+            _ => PurchaseHistoryKind.Subscription
+        };
+
+        var title = payment.Purpose switch
+        {
+            PaymentPurpose.Subscription => "Premium Subscription",
+            PaymentPurpose.BuyCoins => "Coin Pack",
+            PaymentPurpose.BuyAsset => "Store Item",
+            _ => "Payment Transaction"
+        };
+
+        var description = payment.Purpose switch
+        {
+            PaymentPurpose.Subscription => "30-day Premium access",
+            PaymentPurpose.BuyCoins => "Coin pack purchase",
+            PaymentPurpose.BuyAsset => "Direct asset purchase",
+            _ => null
+        };
+
+        return new PurchaseHistoryItemDto(
             payment.Id,
-            PurchaseHistoryKind.Subscription,
-            "Premium Subscription",
-            "30-day Premium access",
+            kind,
+            title,
+            description,
             null,
             payment.Amount,
             payment.Currency,
             payment.Provider,
             payment.TransactionCode,
+            payment.Status,
             null,
             null,
             null,
@@ -307,8 +379,9 @@ public class StoreService : IStoreService
             null,
             null,
             payment.SucceededAt ?? payment.CreatedAt);
+    }
 
-    private static StoreItemDto ToDto(StoreItem x, HashSet<Guid>? ownedIds) =>
+    private static StoreItemDto ToDto(StoreItem x, HashSet<Guid>? ownedIds, IReadOnlyList<StoreItem>? inlineComponents = null) =>
         new(
             x.Id,
             x.Category,
@@ -323,9 +396,14 @@ public class StoreService : IStoreService
             x.ThemeAmbientSoundItemId,
             x.IsPremium,
             x.CoinPrice,
+            x.CoinPrice.HasValue ? (int)Math.Floor(x.CoinPrice.Value * 0.85) : null,
             x.RealMoneyPriceVnd,
             x.IsActive,
             ownedIds is null ? null : ownedIds.Contains(x.Id),
             x.CoinPrice is > 0,
-            x.RealMoneyPriceVnd is > 0);
+            x.RealMoneyPriceVnd is > 0,
+            inlineComponents?.Select(c => ToDto(c, ownedIds, null)).ToList(),
+            x.CreatorId,
+            x.Creator?.Username,
+            x.Creator?.AvatarUrl);
 }

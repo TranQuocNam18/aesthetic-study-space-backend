@@ -10,4 +10,6 @@ public interface IAdminMissionService
     Task<AdminMissionDto> CreateAsync(CreateMissionRequestDto request, CancellationToken cancellationToken = default);
     Task<AdminMissionDto> UpdateAsync(Guid id, UpdateMissionRequestDto request, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task RestoreAsync(Guid id, CancellationToken cancellationToken = default);
+    MissionMetadataOptionsDto GetMetadataOptions();
 }

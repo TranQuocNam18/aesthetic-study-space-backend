@@ -8,7 +8,7 @@ public class Asset : BaseEntity
     public string? Description { get; set; }
     public string Url { get; set; } = string.Empty;
     public AssetType AssetType { get; set; }
-    public AssetCategory Category { get; set; }
+    public string Category { get; set; } = string.Empty;
     public int DefaultVolume { get; set; } = 70;
     public bool IsPremium { get; set; }
     public string? PreviewUrl { get; set; }

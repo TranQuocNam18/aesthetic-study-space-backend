@@ -54,6 +54,6 @@ public static class MappingExtensions
     public static AssetType ParseAssetType(string type) =>
         Enum.TryParse<AssetType>(type, true, out var result) ? result : throw new Domain.Exceptions.ValidationException($"Invalid asset type: {type}");
 
-    public static AssetCategory ParseAssetCategory(string category) =>
-        Enum.TryParse<AssetCategory>(category, true, out var result) ? result : throw new Domain.Exceptions.ValidationException($"Invalid asset category: {category}");
+    public static string ParseAssetCategory(string category) =>
+        string.IsNullOrWhiteSpace(category) ? string.Empty : category.Trim();
 }

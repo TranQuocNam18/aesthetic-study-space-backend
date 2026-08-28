@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using PayOS;
 
 namespace AestheticStudySpace.Infrastructure;
 
@@ -25,6 +26,15 @@ public static class DependencyInjection
         services.Configure<ResendSettings>(configuration.GetSection(ResendSettings.SectionName));
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
         services.Configure<VnPaySettings>(configuration.GetSection(VnPaySettings.SectionName));
+        services.Configure<PayOsSettings>(configuration.GetSection(PayOsSettings.SectionName));
+        services.Configure<GeminiSettings>(configuration.GetSection(GeminiSettings.SectionName));
+
+        // PayOS SDK client (singleton — thread-safe)
+        var payOsSection = configuration.GetSection(PayOsSettings.SectionName);
+        services.AddSingleton(_ => new PayOSClient(
+            payOsSection["ClientId"]    ?? string.Empty,
+            payOsSection["ApiKey"]      ?? string.Empty,
+            payOsSection["ChecksumKey"] ?? string.Empty));
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
@@ -60,6 +70,8 @@ public static class DependencyInjection
         services.AddScoped<ITodoRepository, TodoRepository>();
         services.AddScoped<IPomodoroRepository, PomodoroRepository>();
         services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IUserLuckyDrawRepository, UserLuckyDrawRepository>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IMediaStorageService, CloudinaryMediaStorageService>();
@@ -67,6 +79,13 @@ public static class DependencyInjection
         // Email sending via Resend
         services.AddHttpClient<ResendEmailSender>();
         services.AddScoped<IEmailSender, ResendEmailSender>();
+
+        // AI Services (Gemini)
+        services.AddHttpClient<GeminiService>();
+        services.AddScoped<IAiService, GeminiService>();
+
+        // Retention Email Service
+        services.AddScoped<IRetentionEmailService, RetentionEmailService>();
 
         var jwt = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings are not configured.");
@@ -103,6 +122,7 @@ public static class DependencyInjection
         services.AddAuthorization();
         services.AddHostedService<MissionResetWorker>();
         services.AddHostedService<SubscriptionExpirationWorker>();
+        services.AddHostedService<RetentionEmailWorker>();
 
         return services;
     }

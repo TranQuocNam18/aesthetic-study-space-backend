@@ -7,7 +7,7 @@ public interface IAssetRepository
 {
     Task<IReadOnlyList<Asset>> GetAllAsync(
         AssetType? type = null,
-        AssetCategory? category = null,
+        string? category = null,
         CancellationToken cancellationToken = default);
 
     Task<Asset?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);

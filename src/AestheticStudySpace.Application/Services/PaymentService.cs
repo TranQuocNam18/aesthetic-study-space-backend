@@ -10,6 +10,9 @@ using AestheticStudySpace.Domain.Entities;
 using AestheticStudySpace.Domain.Enums;
 using AestheticStudySpace.Domain.Exceptions;
 using Microsoft.Extensions.Options;
+using PayOS;
+using PayOS.Models.Webhooks;
+using PayOSPaymentRequests = PayOS.Models.V2.PaymentRequests;
 
 namespace AestheticStudySpace.Application.Services;
 
@@ -20,12 +23,14 @@ public class PaymentService : IPaymentService
     private readonly IPaymentFulfillmentService _fulfillment;
     private readonly IUnitOfWork _unitOfWork;
     private readonly VnPaySettings _vnPay;
+    private readonly PayOSClient _payOs;
 
     public PaymentService(
         IPaymentTransactionRepository paymentTxRepo,
         IUserRepository userRepo,
         IPaymentFulfillmentService fulfillment,
         IOptions<VnPaySettings> vnPay,
+        PayOSClient payOs,
         IUnitOfWork unitOfWork)
     {
         _paymentTxRepo = paymentTxRepo;
@@ -33,6 +38,7 @@ public class PaymentService : IPaymentService
         _fulfillment = fulfillment;
         _unitOfWork = unitOfWork;
         _vnPay = vnPay.Value;
+        _payOs = payOs;
     }
 
     public async Task<VnPayCreateResponseDto> CreateVnPayAsync(Guid userId, CreateVnPayPaymentRequestDto request, CancellationToken cancellationToken = default)
@@ -160,6 +166,8 @@ public class PaymentService : IPaymentService
         var tx = await _paymentTxRepo.GetByTransactionCodeAsync(txRef, cancellationToken)
             ?? throw new NotFoundException("Transaction not found.");
 
+        if (tx.Status != PaymentStatus.Pending) return;
+
         query.TryGetValue("vnp_ResponseCode", out var responseCode);
         if (responseCode == "00")
         {
@@ -196,6 +204,116 @@ public class PaymentService : IPaymentService
         if (Enum.TryParse<PaymentPurpose>(purpose, true, out var result))
             return result;
         throw new ValidationException("Invalid payment purpose.");
+    }
+
+    // ── PayOS ─────────────────────────────────────────────────────────────────
+
+    public async Task<PayOsCreateResponseDto> CreatePayOsAsync(Guid userId, CreatePayOsPaymentRequestDto request, CancellationToken cancellationToken = default)
+    {
+        if (request.AmountVnd <= 0) throw new ValidationException("AmountVnd must be positive.");
+        if (request.AmountVnd > 99_999_999) throw new ValidationException("AmountVnd must not exceed 99,999,999 VND per transaction.");
+
+        _ = await _userRepo.GetByIdAsync(userId, cancellationToken) ?? throw new NotFoundException("User not found.");
+
+        // orderCode: PayOS requires a positive integer ≤ long.MaxValue, unique per merchant
+        // Format: ddHHmmss + 3 random digits = 11 digits, well within int64 range
+        var orderCode = long.Parse($"{DateTime.UtcNow:ddHHmmss}{RandomNumberGenerator.GetInt32(100, 999)}");
+        var txCode    = $"POS{orderCode}";
+        var purpose   = ParsePurpose(request.Purpose);
+
+        var returnUrl = string.IsNullOrWhiteSpace(request.ReturnUrl) || request.ReturnUrl.Equals("string", StringComparison.OrdinalIgnoreCase)
+            ? "https://aesthetic-study-space-api.onrender.com/api/payment/payos/return"
+            : request.ReturnUrl.Trim();
+
+        var cancelUrl = string.IsNullOrWhiteSpace(request.CancelUrl) || request.CancelUrl.Equals("string", StringComparison.OrdinalIgnoreCase)
+            ? "https://aesthetic-study-space-api.onrender.com/api/payment/payos/cancel"
+            : request.CancelUrl.Trim();
+
+        // Build PayOS payment link FIRST — if PayOS API fails we don't create orphan DB record
+        var desc = RemoveDiacritics(request.Description ?? "Payment");
+        var paymentLinkRequest = new PayOSPaymentRequests.CreatePaymentLinkRequest
+        {
+            OrderCode   = orderCode,
+            Amount      = (int)request.AmountVnd,
+            Description = desc[..Math.Min(25, desc.Length)],
+            Items       = new List<PayOSPaymentRequests.PaymentLinkItem>
+            {
+                new() { Name = "Aesthetic Study Space", Quantity = 1, Price = (int)request.AmountVnd }
+            },
+            ReturnUrl = returnUrl,
+            CancelUrl = cancelUrl
+        };
+
+        var paymentLink = await _payOs.PaymentRequests.CreateAsync(paymentLinkRequest);
+
+        // Only persist to DB after PayOS confirms the link was created
+        var tx = new PaymentTransaction
+        {
+            UserId              = userId,
+            Provider            = PaymentProvider.PayOS,
+            Status              = PaymentStatus.Pending,
+            Purpose             = purpose,
+            TransactionCode     = txCode,
+            Amount              = request.AmountVnd,
+            Currency            = "VND",
+            ProviderPayloadJson = JsonSerializer.Serialize(new { request.Description, paymentLinkId = paymentLink.PaymentLinkId }),
+            MetadataJson        = JsonSerializer.Serialize(new
+            {
+                storeItemId = request.StoreItemId?.ToString(),
+                coinsAmount = request.CoinsAmount?.ToString()
+            })
+        };
+
+        await _paymentTxRepo.AddAsync(tx, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new PayOsCreateResponseDto(txCode, paymentLink.CheckoutUrl);
+    }
+
+    public async Task HandlePayOsWebhookAsync(string webhookBody, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(webhookBody))
+            throw new ValidationException("Webhook body is empty.");
+
+        WebhookData webhookData;
+        try
+        {
+            var incoming = JsonSerializer.Deserialize<Webhook>(webhookBody,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new Exception("Cannot deserialize webhook body.");
+            webhookData = await _payOs.Webhooks.VerifyAsync(incoming);
+        }
+        catch (Exception ex) when (ex is not AestheticStudySpace.Domain.Exceptions.UnauthorizedException)
+        {
+            // Signature invalid or body malformed
+            throw new UnauthorizedException("Invalid PayOS webhook signature.");
+        }
+
+        // orderCode was stored as long; txCode = "POS" + orderCode
+        var txCode = $"POS{webhookData.OrderCode}";
+        var tx = await _paymentTxRepo.GetByTransactionCodeAsync(txCode, cancellationToken);
+        if (tx is null) return; // unknown order — idempotent, not an error
+
+        if (tx.Status != PaymentStatus.Pending) return; // already processed — idempotent
+
+        // PayOS success code is "00"
+        if (webhookData.Code == "00")
+        {
+            tx.Status      = PaymentStatus.Succeeded;
+            tx.SucceededAt = DateTime.UtcNow;
+        }
+        else
+        {
+            tx.Status   = PaymentStatus.Failed;
+            tx.FailedAt = DateTime.UtcNow;
+        }
+
+        tx.ProviderPayloadJson = webhookBody;
+        await _paymentTxRepo.UpdateAsync(tx, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Only fulfill (grant subscription/coins/asset) if succeeded
+        await _fulfillment.FulfillIfNeededAsync(tx, cancellationToken);
     }
 }
 
